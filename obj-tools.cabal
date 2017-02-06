@@ -1,0 +1,40 @@
+name:                obj-tools
+version:             0.1.0.0
+-- synopsis:            
+-- description:         
+license:             BSD3
+license-file:        LICENSE
+author:              Andy Gill
+maintainer:          andygill@ku.edu
+-- copyright:           
+category:            Graphics
+build-type:          Simple
+-- extra-source-files:  
+cabal-version:       >=1.10
+
+library
+  Exposed-modules:     Linear.Quaternion.Utils 
+  default-language:    Haskell2010
+  build-depends:       base >=4.8 && <4.9
+               ,       linear >= 1.20.5
+
+  Hs-Source-Dirs:      src
+  
+test-suite obj-tools-utils-tests
+    type:              exitcode-stdio-1.0
+    build-depends:     base        >= 4.7 && < 5
+               ,       linear >= 1.20.5
+               ,       obj-tools   == 0.1.0.0
+               ,       QuickCheck
+               ,       text
+               ,       vector >= 0.11
+
+    default-language:  Haskell2010
+    main-is:           Utils.hs
+    hs-source-dirs:    tests
+    ghc-options:       -Wall
+
+source-repository head
+  type:     git
+  location: git://github.com/ku-fpg/obj-tools.git
+
