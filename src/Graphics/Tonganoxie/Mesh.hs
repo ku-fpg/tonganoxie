@@ -2,7 +2,7 @@
 module Graphics.Tonganoxie.Mesh where
 
 import Data.Text (Text)
-import Data.Vector (Vector, toList, fromList)
+import Data.Vector (Vector, toList, fromList, (!))
 
 import Linear.Affine (Point) 
 import qualified Linear.Affine as Affine
@@ -27,6 +27,12 @@ data NoUV = NoUV
 
 data Vertex uv = Vertex !PT !NO uv
 
+showPT :: PT -> String
+showPT (PT i) = show (i + 1)
+
+showNO :: NO -> String
+showNO (NO i) = show (i + 1)
+
 --------------------------------------------------------------------------------
 
 data Material :: * -> * where
@@ -34,8 +40,15 @@ data Material :: * -> * where
   Texture  :: Text -> Material UV
 
 materialUV :: Material uv -> Int -> uv
-materialUV (Material) _ = NoUV
+materialUV (Material) _   = NoUV
 materialUV (Texture {}) i = UV i
+
+showUV :: Material uv -> uv -> String
+showUV (Material)   NoUV   = ""
+showUV (Texture {}) (UV i) = show (i + 1)
+
+materialName :: Material uv -> String
+materialName (Material) = "color"
 
 --------------------------------------------------------------------------------
 -- Shapes
@@ -101,14 +114,15 @@ instance Show Mesh where
         [ "vn" ++  concatMap (\ v -> " " ++ show v) [x,y,z] 
         | (V3 x y z) <- toList $ normals m 
         ] ++
-{-
         [ unlines $
-          ["usemtl ..."] ++
-          [ "f" ++ concatMap (\ v -> " " ++ show v) [x,y,z]  
-          | v <- vs
+          ["# usemtl ..."] ++
+          [ "f " ++ unwords [ showPT a ++ "/" ++ showNO b ++ "/" ++ showUV m c 
+                            | Vertex a b c <- vs 
+                            ]
           ]
-        | (Face vs m) <- toList $ normals m 
+        | Face vs m <- faces m 
         ] ++
--}
         [ "# end of file" ]
-        
+
+
+example = plane (V2 1 1) Material
