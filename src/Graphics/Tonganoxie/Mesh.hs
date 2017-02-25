@@ -2,10 +2,13 @@
 module Graphics.Tonganoxie.Mesh where
 
 import Data.Text (Text)
-import Data.Vector (Vector, toList, fromList, (!))
+import Data.Vector (Vector, toList, fromList)
+import qualified Data.Vector as V
 
-import Linear.Affine (Point) 
-import qualified Linear.Affine as Affine
+import Linear.Affine (Point, (.+^)) 
+import qualified Linear.Affine as A
+import Linear.Quaternion (Quaternion)
+import qualified Linear.Quaternion as Q
 import Linear.V3 (V3(V3))
 import Linear.V2 (V2(V2))
 
@@ -47,8 +50,52 @@ showUV :: Material uv -> uv -> String
 showUV (Material)   NoUV   = ""
 showUV (Texture {}) (UV i) = show (i + 1)
 
+incUV :: Material uv -> Int -> uv -> uv
+incUV (Material)   _ NoUV   = NoUV
+incUV (Texture {}) n (UV i) = UV (n + i)
+
 materialName :: Material uv -> String
 materialName (Material) = "color"
+
+--------------------------------------------------------------------------------
+-- Operations
+
+-- rotate using the given 'Quaternion'. The normals are preserved,
+-- because they admit the same rotation.
+rotate :: Quaternion Double -> Mesh -> Mesh
+rotate r m = m
+  { points  = fmap (\ (A.P p) -> A.P $ Q.rotate r $ p) (points m)
+  , normals = fmap (Q.rotate r) (normals m)
+  }
+  
+-- translate using the given 3D vector. The normals are preserved.
+translate :: V3 Double -> Mesh -> Mesh
+translate dd m = m
+  { points  = fmap (.+^ dd) (points m)
+  }
+
+instance Monoid Mesh where
+    mempty = Mesh 
+           { points  = V.empty 
+           , normals = V.empty
+           , uvs     = V.empty
+           , faces   = []
+           }
+    mappend m1 m2 = Mesh 
+                  { points  = points  m1 V.++ points m2
+                  , normals = normals m1 V.++ normals m2
+                  , uvs     = uvs     m1 V.++ uvs m2
+                  , faces   = faces m1     ++ fmap f (faces m2)
+                  }
+       where
+           pOff  = V.length (points m1)
+           nOff  = V.length (normals m1)
+           uvOff = V.length (uvs m1)
+           f :: Face -> Face
+           f (Face vs m) = Face (fmap (g m) vs) m
+           g :: Material a -> Vertex a -> Vertex a
+           g m (Vertex (PT a) (NO b) c) 
+              = Vertex (PT (a + pOff)) (NO (b + nOff)) (incUV m uvOff c)
 
 --------------------------------------------------------------------------------
 -- Shapes
@@ -58,7 +105,7 @@ plane :: V2 Int -> Material a -> Mesh
 plane (V2 1 1) m = mesh
   where    
     mesh = Mesh
-      { points  = fromList [ Affine.P (V3 x y 0) | V2 x y <- uvs ]
+      { points  = fromList [ A.P (V3 x y 0) | V2 x y <- uvs ]
       , normals = fromList [ V3 0 0 1 ]
       , uvs     = fromList $ uvs
       , faces   = [Face [ Vertex (PT i) (NO 0) (materialUV m i) | i <- [0..3]] m ]
@@ -86,27 +133,16 @@ translate :: V3 Double -> Mesh -> Mesh
 
 group :: Text -> Mesh -> Mesh
 
--- needs to be at least 1x1
-plane :: V2 Int -> Material a -> Mesh
-plane (V2 1 1) m = Mesh
-  { points  = V.fromList [ Point (V3 1 1 0) ]
-  , normals = V.fromList [ V3 0 0 1 ]
-  , uvs     = V.fromList [ ... ]
-  , faces   = [ Face [ Vertex p (N 0) (materialUV m uv) | (p,uv) <- [0..3]] m ]
-  }
-
-color :: Text -> Material NoUV
-
-materialUV :: Material uv -> Int -> uv
 -}
 
 --------------------------------------------------------------------------------
 
+-- We use the .obj format to show the Mesh
 instance Show Mesh where
     show m = unlines $
         [ "# generated with obj-tools" ] ++
         [ "v" ++ concatMap (\ v -> " " ++ show v) [x,y,z] 
-        | (Affine.P (V3 x y z)) <- toList $ points m 
+        | (A.P (V3 x y z)) <- toList $ points m 
         ] ++
         [ "vt" ++  concatMap (\ v -> " " ++ show v) [u,v] 
         | (V2 u v) <- toList $ uvs m 
