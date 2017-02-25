@@ -166,3 +166,8 @@ xAxis, yAxis, zAxis :: Num a => V3 a
 xAxis = V3 1 0 0
 yAxis = V3 0 1 0
 zAxis = V3 0 0 1
+
+-- invert the direction of a rotation.
+
+invertq :: Num a => Quaternion a -> Quaternion a
+invertq (Quaternion q v) = Quaternion q (-v)
