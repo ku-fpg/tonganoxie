@@ -11,6 +11,10 @@ import Linear.Quaternion (Quaternion)
 import qualified Linear.Quaternion as Q
 import Linear.V3 (V3(V3))
 import Linear.V2 (V2(V2))
+import Linear.Vector (liftU2)
+import Linear.Metric(normalize, distance)
+
+import Linear.Quaternion.Utils
 
 data Mesh = Mesh 
   { points  :: Vector (Point V3 Double)
@@ -74,6 +78,15 @@ translate dd m = m
   { points  = fmap (.+^ dd) (points m)
   }
 
+
+-- translate using the given 3D vector. The normals are preserved.
+scale :: V3 Double -> Mesh -> Mesh
+scale ss m = m
+  { points  = fmap (\ (A.P p) -> A.P $ liftU2 (*) ss p) (points m)
+  , normals = fmap (normalize . liftU2 (*) ss') (normals m)
+  }
+  where ss' = fmap (1/) ss
+
 instance Monoid Mesh where
     mempty = Mesh 
            { points  = V.empty 
@@ -105,7 +118,7 @@ plane :: V2 Int -> Material a -> Mesh
 plane (V2 1 1) m = mesh
   where    
     mesh = Mesh
-      { points  = fromList [ A.P (V3 x y 0) | V2 x y <- uvs ]
+      { points  = fromList [ A.P (V3 x y 0) | V2 x y <- fmap (fmap (\ n -> n * 2 - 1)) uvs ]
       , normals = fromList [ V3 0 0 1 ]
       , uvs     = fromList $ uvs
       , faces   = [Face [ Vertex (PT i) (NO 0) (materialUV m i) | i <- [0..3]] m ]
