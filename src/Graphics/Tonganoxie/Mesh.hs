@@ -1,6 +1,8 @@
-{-# LANGUAGE GADTs, KindSignatures #-}
+{-# LANGUAGE GADTs, KindSignatures, StandaloneDeriving #-}
 module Graphics.Tonganoxie.Mesh where
 
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as M
 import Data.Text (Text)
 import Data.Vector (Vector, toList, fromList)
 import qualified Data.Vector as V
@@ -16,30 +18,47 @@ import Linear.Metric(normalize, distance)
 
 import Linear.Quaternion.Utils
 
+import Graphics.Tonganoxie.Material 
+
+-- A 'Mesh' is our key data-structure.
 data Mesh = Mesh 
-  { points  :: Vector (Point V3 Double)
-  , normals :: Vector (V3 Double)
-  , uvs     :: Vector (V2 Double)
-  , faces   :: [Face]  --- Order is not important
-  }
+  { points       :: Vector (Point V3 Double)
+  , normals      :: Vector (V3 Double)
+  , uvs          :: Vector (V2 Double)
+  , materials    :: Vector (Material ())
+  , uv_materials :: Vector (Material UV)
+  , faces        :: [Face]  --- Order is not important
+  } deriving Show
 
 data Face where
-  Face :: [Vertex a] -> Material a -> Face
+  Face :: [Vertex a] -> MT a -> Face
 
-newtype PT = PT Int
-newtype NO = NO Int
-newtype UV = UV Int
+instance Show Face where
+  -- We explicitly case here to avoid neededing to carry the dictionary
+  -- in every Face constructor
+  show (Face vs mt@(MTUV _))   = "Face " ++ show vs ++ " " ++ show mt
+  show (Face vs mt@(MTNoUV _)) = "Face " ++ show vs ++ " " ++ show mt
+  
+showFace :: [Vertex a] -> MT a -> String
+showFace vs (MTUV _) = "Face " ++ show (vs :: [Vertex UV])
 
-data NoUV = NoUV
+newtype PT = PT Int     deriving Show
+newtype NO = NO Int     deriving Show
 
-data Vertex uv = Vertex !PT !NO uv
+data MT :: * -> * where 
+  MTUV   :: Int -> MT UV
+  MTNoUV :: Int -> MT ()
+  
+deriving instance Show (MT a)
+
+data Vertex uv = Vertex !PT uv !NO deriving Show
 
 showPT :: PT -> String
 showPT (PT i) = show (i + 1)
 
 showNO :: NO -> String
 showNO (NO i) = show (i + 1)
-
+{-
 --------------------------------------------------------------------------------
 
 data Material :: * -> * where
@@ -54,13 +73,10 @@ showUV :: Material uv -> uv -> String
 showUV (Material)   NoUV   = ""
 showUV (Texture {}) (UV i) = show (i + 1)
 
-incUV :: Material uv -> Int -> uv -> uv
-incUV (Material)   _ NoUV   = NoUV
-incUV (Texture {}) n (UV i) = UV (n + i)
 
 materialName :: Material uv -> String
 materialName (Material) = "color"
-
+-}
 --------------------------------------------------------------------------------
 -- Operations
 
@@ -78,8 +94,8 @@ translate dd m = m
   { points  = fmap (.+^ dd) (points m)
   }
 
-
--- translate using the given 3D vector. The normals are preserved.
+-- scale using the given 3D vector. The normals are preserved. 
+-- scale by zero makes bad things happen to normals.
 scale :: V3 Double -> Mesh -> Mesh
 scale ss m = m
   { points  = fmap (\ (A.P p) -> A.P $ liftU2 (*) ss p) (points m)
@@ -87,28 +103,45 @@ scale ss m = m
   }
   where ss' = fmap (1/) ss
 
+
 instance Monoid Mesh where
     mempty = Mesh 
-           { points  = V.empty 
-           , normals = V.empty
-           , uvs     = V.empty
-           , faces   = []
+           { points    = V.empty 
+           , normals   = V.empty
+           , uvs       = V.empty
+           , materials = V.empty
+           , uv_materials = V.empty
+           , faces     = []
            }
+
     mappend m1 m2 = Mesh 
-                  { points  = points  m1 V.++ points m2
-                  , normals = normals m1 V.++ normals m2
-                  , uvs     = uvs     m1 V.++ uvs m2
-                  , faces   = faces m1     ++ fmap f (faces m2)
+                  { points       = points  m1 V.++ points m2
+                  , normals      = normals m1 V.++ normals m2
+                  , uvs          = uvs     m1 V.++ uvs m2
+                  , materials    = V.empty
+                  , uv_materials = V.empty
+                  , faces        = faces m1     ++ fmap f (faces m2)
                   }
        where
-           pOff  = V.length (points m1)
-           nOff  = V.length (normals m1)
-           uvOff = V.length (uvs m1)
+           pOff     = V.length (points m1)
+           nOff     = V.length (normals m1)
+           uvOff    = V.length (uvs m1)
+           mOff     = V.length (materials m1)
+           uv_mOff  = V.length (uv_materials m1)
+                          
            f :: Face -> Face
-           f (Face vs m) = Face (fmap (g m) vs) m
-           g :: Material a -> Vertex a -> Vertex a
-           g m (Vertex (PT a) (NO b) c) 
-              = Vertex (PT (a + pOff)) (NO (b + nOff)) (incUV m uvOff c)
+           f (Face vs m) = Face (fmap (g m) vs) (incM m)
+           g :: MT a -> Vertex a -> Vertex a
+           g m (Vertex (PT a) c (NO b)) 
+              = Vertex (PT (a + pOff)) (incUV m c) (NO (b + nOff)) 
+
+           incUV :: MT uv ->  uv -> uv
+           incUV (MTNoUV _) ()     = ()
+           incUV (MTUV   _) (UV i) = UV (i + uvOff)
+
+           incM :: MT uv -> MT uv
+           incM (MTNoUV i) = MTNoUV (i + mOff)
+           incM (MTUV   i) = MTUV   (i + uv_mOff)
 
 --------------------------------------------------------------------------------
 -- Shapes
@@ -120,33 +153,29 @@ plane (V2 1 1) m = mesh
     mesh = Mesh
       { points  = fromList [ A.P (V3 x y 0) | V2 x y <- fmap (fmap (\ n -> n * 2 - 1)) uvs ]
       , normals = fromList [ V3 0 0 1 ]
-      , uvs     = fromList $ uvs
-      , faces   = [Face [ Vertex (PT i) (NO 0) (materialUV m i) | i <- [0..3]] m ]
+      , uvs     = case m of
+                    Material _ _ MatchUV -> fromList $ uvs
+                    _ -> V.empty
+      , materials    = fromList $ [ mt | Just mt <- [addNoUVMaterial m] ]
+      , uv_materials = fromList $ [ mt | Just mt <- [addUVMaterial   m] ]
+      , faces   = [ Face [ Vertex (PT i)  (materialUV m i) (NO 0)| i <- [0..3]] 
+                  $ mkMT m
+                  ]
       }
+
+    materialUV :: Material a -> Int -> a
+    materialUV (Material _ _ MatchUV) i   = UV i
+    materialUV (Material _ _ MatchNoUV) i = ()
+    
     uvs :: [V2 Double]
-    uvs = [V2 0 0, V2 0 1, V2 1 1, V2 1 0]
+    uvs = [V2 0 0, V2 1 0, V2 1 1, V2 0 1]
 
 
+mkMT :: Material a -> MT a
+mkMT (Material _ _ MatchUV)   = MTUV 0
+mkMT (Material _ _ MatchNoUV) = MTNoUV 0
 
-
-
-{-  
-instance Monoid Mesh where
-
-
-
-  remap :: Int -> a -> a
-  
-      
-rotate :: Quaternion Double -> Mesh -> Mesh
-
-scale :: V3 Double -> Mesh -> Mesh
-
-translate :: V3 Double -> Mesh -> Mesh
-
-group :: Text -> Mesh -> Mesh
-
--}
+{-
 
 --------------------------------------------------------------------------------
 
@@ -165,7 +194,7 @@ instance Show Mesh where
         ] ++
         [ unlines $
           ["# usemtl ..."] ++
-          [ "f " ++ unwords [ showPT a ++ "/" ++ showNO b ++ "/" ++ showUV m c 
+          [ "f " ++ unwords [ showPT a ++ "/" ++ showUV m c ++ "/" ++ showNO b
                             | Vertex a b c <- vs 
                             ]
           ]
@@ -174,4 +203,7 @@ instance Show Mesh where
         [ "# end of file" ]
 
 
-example = plane (V2 1 1) Material
+-}
+
+example = plane (V2 1 1) $ color (1,0,0)
+
