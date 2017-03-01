@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, KindSignatures, RankNTypes, StandaloneDeriving, DefaultSignatures, FlexibleInstances #-}
+{-# LANGUAGE GADTs, KindSignatures, RankNTypes, StandaloneDeriving, DefaultSignatures, FlexibleInstances, OverloadedStrings #-}
 module Graphics.Tonganoxie.Material where
 
 import Data.Monoid ((<>))
@@ -51,25 +51,51 @@ materialName (Material) = "color"
 -}
 
 --------------------------------------------------------------------------------
--- | Summary comments from http://paulbourke.net/dataformats/mtl/
+-- | Summary comments adapted from from http://paulbourke.net/dataformats/mtl/ and
+--   https://people.cs.clemson.edu/~dhouse/courses/405/docs/brief-mtl-file-format.html
+-- 
+--
+-- * 'Ka' specifies the ambient reflectivity using RGB values.
+-- * 'Kd' specifies the diffuse reflectivity using RGB values.
+-- * 'Ks' specifies the specular reflectivity using RGB values.
+-- * 'Ns' specifies the specular exponent. A high exponent results in a tight, concentrated highlight. 
+--   'Ns' values normally range from 0 to 1000.
+-- 
+-- * 'Map_Ka' and 'Map_Kd' apply a pointwise map to 'Ka' and 'Kd',
+--   using a texture/image.
+--    This uses the formula  (given Ka, same for Kd)
+--    "Ka - (1-texture alpha) * material ambient + texture alpha * texture value".
+--    Assuming an alpha of 1, this reduces to "Ka * texture value".
+--
+-- * 'Illum' is the illumination model. 
+--   '0' is constant color illumination model, via 'Kd'.
+--   '1' is diffuse illumination, via 'Ka' and 'Kd', using lighting.
+--   '2' is diffuse and specular, via 'Ka', 'Kd', and 'Ks', using lighting.
+
+-- *  'D' specifies the dissolve for the current material, when 1, the default, is full opaque.
+
 
 data Def :: * -> * where
-    -- | The Ka statement specifies the ambient reflectivity using RGB values.
     Ka :: Double -> Double -> Double -> Def a
-    --  | The Kd statement specifies the diffuse reflectivity using RGB values.
     Kd :: Double -> Double -> Double -> Def a
-    -- | The Ks statement specifies the specular reflectivity using RGB values.
     Ks :: Double -> Double -> Double -> Def a
+    Ns :: Double                     -> Def a
+
     Map_Ka :: Text                   -> Def UV
+    Map_Kd :: Text                   -> Def UV
+
+    -- Illumination model
+    Illum :: Int                     -> Def a
+
+    D :: Double                      -> Def a
 
 deriving instance Eq (Def a)
 deriving instance Ord (Def a)
 deriving instance Show (Def a)
 
-eqDef :: Def a -> Def b -> Bool
-eqDef (Ka r g b) (Ka r' g' b') = r == r' && g == g' && b == b'
-eqDef _ _ = False
 
+materialName :: Material a -> Text
+materialName (Material nm _ _) = nm
 
 showMaterial :: Material a -> Text
 showMaterial (Material nm defs _) = T.unlines
@@ -77,6 +103,13 @@ showMaterial (Material nm defs _) = T.unlines
 
 showDef :: Def a -> Text
 showDef (Ka r g b) = T.unwords ["Ka",showU r,showU g,showU b]
+showDef (Kd r g b) = T.unwords ["Kd",showU r,showU g,showU b]
+showDef (Ks r g b) = T.unwords ["Ks",showU r,showU g,showU b]
+showDef (Ns d)     = T.unwords ["Ns",showU d]
+showDef (Map_Ka f) = T.unwords ["map_Ka",f]
+showDef (Map_Kd f) = T.unwords ["map_Kd",f]
+showDef (Illum i)  = T.unwords ["illum",T.pack $ show i]
+showDef (D d)      = T.unwords ["d",showU d]
 
 
 -- show a number to 5 decimal places.
@@ -92,9 +125,9 @@ addNoUVMaterial m@(Material _ vs MatchNoUV) = Just m
 addNoUVMaterial (Material _ vs MatchUV)   = Nothing
 
 color :: (Double,Double,Double) -> Material ()
-color (r,g,b) = Material nm [Ka r g b] MatchNoUV
- where nm = "rgb_" <> db r <> db g <> db b
- 
+color (r,g,b) = material nm [Ka r g b, Kd r g b, Illum 1]
+ where nm :: Text
+       nm = "rgb_" <> db r <> db g <> db b
        db :: Double -> Text
        db d = T.pack $ reverse $ take 2 $ reverse $ ("0" ++ showHex (round (d * 255)) "")
        
@@ -103,3 +136,5 @@ uvMaterial nm defs = Material nm defs MatchUV
 
 material :: Text -> [Def ()] -> Material ()
 material nm defs = Material nm defs MatchNoUV
+
+
