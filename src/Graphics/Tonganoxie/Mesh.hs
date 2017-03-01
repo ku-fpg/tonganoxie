@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, KindSignatures, StandaloneDeriving #-}
+{-# LANGUAGE GADTs, KindSignatures, StandaloneDeriving, OverloadedStrings #-}
 module Graphics.Tonganoxie.Mesh where
 
 import Data.Map.Strict (Map)
@@ -6,6 +6,7 @@ import qualified Data.Map.Strict as M
 import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import Data.Vector (Vector, toList, fromList)
 import qualified Data.Vector as V
 
@@ -17,6 +18,8 @@ import Linear.V3 (V3(V3))
 import Linear.V2 (V2(V2))
 import Linear.Vector (liftU2)
 import Linear.Metric(normalize, distance)
+
+import System.FilePath (replaceExtension)
 
 import Linear.Quaternion.Utils
 
@@ -215,14 +218,15 @@ showMesh m = T.unlines $
         | (V3 x y z) <- toList $ normals m 
         ] ++
         [ T.unlines $
-          ["# usemtl " <> nm] ++
+          ["usemtl " <> nm] ++
           [ "f " <> T.unwords [ showPT a <> "/" <> showUV mt b <> "/" <> showNO c
                               | Vertex a b c <- vs 
                               ]
           ]
         | Face vs mt <- faces m
-        , let nm = case m of
-                     _ -> "..."
+        , let nm = case mt of
+                     MTUV i   -> materialName $ uv_materials m V.! i
+                     MTNoUV i -> materialName $ materials m V.! i
         ] ++
         [ "# end of file" ]
   where
@@ -237,6 +241,22 @@ showMesh m = T.unlines $
     showNO :: NO -> Text
     showNO (NO i) = T.pack $ show (i + 1)
 
+example1 = plane (V2 1 1) $ color (1,0,0)
 
-example = plane (V2 1 1) $ color (1,0,0)
+example2 = plane (V2 1 1) $ uvMaterial "dice"
+  [ Kd 1 1 1
+  , Map_Ka "dice.jpg"
+  ]
 
+  
+-- given foo.obj, writes a foo.obj and foo.mtl file.
+writeMesh :: FilePath -> Mesh -> IO ()
+writeMesh fileName mesh = do
+    T.writeFile objFileName $ showMesh mesh
+    T.writeFile mtlFileName $ T.unlines $
+            (map showMaterial $ V.toList $ materials $ mesh) ++ 
+            (map showMaterial $ V.toList $ uv_materials $ mesh) 
+
+  where
+    objFileName = fileName
+    mtlFileName = replaceExtension fileName "mtl"
