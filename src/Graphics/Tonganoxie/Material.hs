@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, KindSignatures, RankNTypes, StandaloneDeriving #-}
+{-# LANGUAGE GADTs, KindSignatures, RankNTypes, StandaloneDeriving, DefaultSignatures, FlexibleInstances #-}
 module Graphics.Tonganoxie.Material where
 
 import Data.Monoid ((<>))
@@ -79,7 +79,7 @@ showDef :: Def a -> Text
 showDef (Ka r g b) = T.unwords ["Ka",showU r,showU g,showU b]
 
 
--- show unit value (between 0 and 1, inclusive)
+-- show a number to 5 decimal places.
 showU :: Double -> Text
 showU d = T.pack $ showFFloat (Just 5) d $ ""
 
@@ -97,3 +97,9 @@ color (r,g,b) = Material nm [Ka r g b] MatchNoUV
  
        db :: Double -> Text
        db d = T.pack $ reverse $ take 2 $ reverse $ ("0" ++ showHex (round (d * 255)) "")
+       
+uvMaterial :: Text -> [Def UV] -> Material UV
+uvMaterial nm defs = Material nm defs MatchUV
+
+material :: Text -> [Def ()] -> Material ()
+material nm defs = Material nm defs MatchNoUV
