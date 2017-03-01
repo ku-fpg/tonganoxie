@@ -3,7 +3,9 @@ module Graphics.Tonganoxie.Mesh where
 
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
+import Data.Monoid ((<>))
 import Data.Text (Text)
+import qualified Data.Text as T
 import Data.Vector (Vector, toList, fromList)
 import qualified Data.Vector as V
 
@@ -53,11 +55,6 @@ deriving instance Show (MT a)
 
 data Vertex uv = Vertex !PT uv !NO deriving Show
 
-showPT :: PT -> String
-showPT (PT i) = show (i + 1)
-
-showNO :: NO -> String
-showNO (NO i) = show (i + 1)
 {-
 --------------------------------------------------------------------------------
 
@@ -204,6 +201,42 @@ instance Show Mesh where
 
 
 -}
+
+showMesh :: Mesh -> Text
+showMesh m = T.unlines $
+        [ "# generated useing tonganoxie" ] ++
+        [ T.unwords $ "v" : map showU [x,y,z] 
+        | (A.P (V3 x y z)) <- toList $ points m 
+        ] ++
+        [ T.unwords $ "vt" : map showU [u,v] 
+        | (V2 u v) <- toList $ uvs m 
+        ] ++
+        [ T.unwords $ "vn" : map showU [x,y,z] 
+        | (V3 x y z) <- toList $ normals m 
+        ] ++
+        [ T.unlines $
+          ["# usemtl " <> nm] ++
+          [ "f " <> T.unwords [ showPT a <> "/" <> showUV mt b <> "/" <> showNO c
+                              | Vertex a b c <- vs 
+                              ]
+          ]
+        | Face vs mt <- faces m
+        , let nm = case m of
+                     _ -> "..."
+        ] ++
+        [ "# end of file" ]
+  where
+    -- Only show UV indexes if there are any
+    showUV :: MT a -> a -> Text
+    showUV (MTUV _) (UV i) = T.pack $ show (i + 1)        
+    showUV (MTNoUV _)   () = ""
+
+    showPT :: PT -> Text
+    showPT (PT i) = T.pack $ show (i + 1)
+
+    showNO :: NO -> Text
+    showNO (NO i) = T.pack $ show (i + 1)
+
 
 example = plane (V2 1 1) $ color (1,0,0)
 
