@@ -132,7 +132,7 @@ plane :: V2 Int -> Material a -> Mesh
 plane (V2 1 1) m = mesh
   where    
     mesh = Mesh
-      { points  = fromList [ A.P (V3 x y 0) | V2 x y <- fmap (fmap (\ n -> n * 2 - 1)) uvs ]
+      { points  = fromList [ A.P (V3 x 0 z) | V2 x z <- fmap (fmap (\ n -> n * 2 - 1)) uvs ]
       , normals = fromList [ V3 0 0 1 ]
       , uvs     = case m of
                     Material _ _ MatchUV -> fromList $ uvs
@@ -196,7 +196,8 @@ example1 = plane (V2 1 1) $ color (1,0,0)
 
 example2 = plane (V2 1 1) $ uvMaterial "dice"
   [ Kd 1 1 1
-  , Map_Ka "dice.jpg"
+  , Map_Kd "dice.jpg"
+  , Illum 0
   ]
 
   
