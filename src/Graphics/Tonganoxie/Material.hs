@@ -33,22 +33,6 @@ newtype UV = UV Int deriving Show
 materialMatch :: Material a -> Match a
 materialMatch (Material _ _ m) = m
 
-{-
-showUV :: Material uv -> uv -> String
-showUV (Material _ _ MatchNoUV)  NoUV   = ""
---showUV (Texture {}) (UV i) = show (i + 1)
-
-materialUV :: Material uv -> Int -> uv
-materialUV (Material) _   = NoUV
-materialUV (Texture {}) i = UV i
-
-incUV :: Material uv -> Int -> uv -> uv
-incUV (Material)   _ NoUV   = NoUV
-incUV (Texture {}) n (UV i) = UV (n + i)
-
-materialName :: Material uv -> String
-materialName (Material) = "color"
--}
 
 --------------------------------------------------------------------------------
 -- | Summary comments adapted from from http://paulbourke.net/dataformats/mtl/ and

@@ -58,25 +58,6 @@ deriving instance Show (MT a)
 
 data Vertex uv = Vertex !PT uv !NO deriving Show
 
-{-
---------------------------------------------------------------------------------
-
-data Material :: * -> * where
-  Material ::         Material NoUV
-  Texture  :: Text -> Material UV
-
-materialUV :: Material uv -> Int -> uv
-materialUV (Material) _   = NoUV
-materialUV (Texture {}) i = UV i
-
-showUV :: Material uv -> uv -> String
-showUV (Material)   NoUV   = ""
-showUV (Texture {}) (UV i) = show (i + 1)
-
-
-materialName :: Material uv -> String
-materialName (Material) = "color"
--}
 --------------------------------------------------------------------------------
 -- Operations
 
@@ -174,36 +155,6 @@ plane (V2 1 1) m = mesh
 mkMT :: Material a -> MT a
 mkMT (Material _ _ MatchUV)   = MTUV 0
 mkMT (Material _ _ MatchNoUV) = MTNoUV 0
-
-{-
-
---------------------------------------------------------------------------------
-
--- We use the .obj format to show the Mesh
-instance Show Mesh where
-    show m = unlines $
-        [ "# generated with obj-tools" ] ++
-        [ "v" ++ concatMap (\ v -> " " ++ show v) [x,y,z] 
-        | (A.P (V3 x y z)) <- toList $ points m 
-        ] ++
-        [ "vt" ++  concatMap (\ v -> " " ++ show v) [u,v] 
-        | (V2 u v) <- toList $ uvs m 
-        ] ++
-        [ "vn" ++  concatMap (\ v -> " " ++ show v) [x,y,z] 
-        | (V3 x y z) <- toList $ normals m 
-        ] ++
-        [ unlines $
-          ["# usemtl ..."] ++
-          [ "f " ++ unwords [ showPT a ++ "/" ++ showUV m c ++ "/" ++ showNO b
-                            | Vertex a b c <- vs 
-                            ]
-          ]
-        | Face vs m <- faces m 
-        ] ++
-        [ "# end of file" ]
-
-
--}
 
 showMesh :: Mesh -> Text
 showMesh m = T.unlines $
