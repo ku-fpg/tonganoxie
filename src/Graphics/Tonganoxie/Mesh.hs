@@ -14,10 +14,10 @@ import Linear.Affine (Point, (.+^))
 import qualified Linear.Affine as A
 import Linear.Quaternion (Quaternion)
 import qualified Linear.Quaternion as Q
-import Linear.V3 (V3(V3))
+import Linear.V3 (V3(V3),cross)
 import Linear.V2 (V2(V2))
 import Linear.Vector (liftU2)
-import Linear.Metric(normalize, distance)
+import Linear.Metric(normalize, distance, dot)
 
 import System.FilePath (replaceExtension)
 
@@ -127,35 +127,6 @@ instance Monoid Mesh where
 --------------------------------------------------------------------------------
 -- Shapes
 
--- needs to be at least 1x1
-plane :: V2 Int -> Material a -> Mesh
-plane (V2 1 1) m = mesh
-  where    
-    mesh = Mesh
-      { points  = fromList [ A.P (V3 x 0 z) | V2 x z <- fmap (fmap (\ n -> n * 2 - 1)) uvs ]
-      , normals = fromList [ V3 0 0 1 ]
-      , uvs     = case m of
-                    Material _ _ MatchUV -> fromList $ uvs
-                    _ -> V.empty
-      , materials    = fromList $ [ mt | Just mt <- [addNoUVMaterial m] ]
-      , uv_materials = fromList $ [ mt | Just mt <- [addUVMaterial   m] ]
-      , faces   = [ Face [ Vertex (PT i)  (materialUV m i) (NO 0)| i <- [0..3]] 
-                  $ mkMT m
-                  ]
-      }
-
-    materialUV :: Material a -> Int -> a
-    materialUV (Material _ _ MatchUV) i   = UV i
-    materialUV (Material _ _ MatchNoUV) i = ()
-    
-    uvs :: [V2 Double]
-    uvs = [V2 0 0, V2 1 0, V2 1 1, V2 0 1]
-
-
-mkMT :: Material a -> MT a
-mkMT (Material _ _ MatchUV)   = MTUV 0
-mkMT (Material _ _ MatchNoUV) = MTNoUV 0
-
 showMesh :: Mesh -> Text
 showMesh m = T.unlines $
         [ "# generated useing tonganoxie" ] ++
@@ -192,15 +163,6 @@ showMesh m = T.unlines $
     showNO :: NO -> Text
     showNO (NO i) = T.pack $ show (i + 1)
 
-example1 = plane (V2 1 1) $ color (1,0,0)
-
-example2 = plane (V2 1 1) $ uvMaterial "dice"
-  [ Kd 1 1 1
-  , Map_Kd "dice.jpg"
-  , Illum 0
-  ]
-
-  
 -- given foo.obj, writes a foo.obj and foo.mtl file.
 writeMesh :: FilePath -> Mesh -> IO ()
 writeMesh fileName mesh = do
@@ -212,3 +174,19 @@ writeMesh fileName mesh = do
   where
     objFileName = fileName
     mtlFileName = replaceExtension fileName "mtl"
+
+
+-- Perhaps combine with Mesh?
+data RawMesh = RawMesh 
+  { raw_points :: Vector (Point V3 Double)
+  , raw_faces :: [[PT]]
+  }
+
+
+rawMeshFaceNormals :: RawMesh -> [V3 Double]
+rawMeshFaceNormals rm = 
+    [ let A.P p1 = raw_points rm V.! i1
+          A.P p2 = raw_points rm V.! i2
+          A.P p3 = raw_points rm V.! i3
+      in normalize $ (p2 - p1) `cross` (p3 - p2)
+    | ~(PT i1:PT i2:PT i3:_) <- raw_faces rm ]
