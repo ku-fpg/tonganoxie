@@ -112,6 +112,20 @@ mirror ax (Shape f uvs faces) = Shape f' uvs' faces
 
 -}
 
+planeShape :: Shape (V2 Double)
+planeShape = Shape f uvs faces
+ where
+     f (V2 x y) = V3 (g x) (g y) 0
+     g n = (n * 2) - 1
+     uvs = [ V2 x y
+           | x <- [0,1]
+           , y <- [0,1]
+           ]
+     faces = map (map UV) 
+           [ [1,0,2,3]
+           ]
+
+
 cubeShape :: Shape (Bool,Bool,Bool)
 cubeShape = Shape f uvs faces
  where
@@ -148,7 +162,38 @@ shape s m = Mesh
                      ]
         the_normals = fromList $ rawMeshFaceNormals $ RawMesh the_points 
                                $ [ [ pt | Vertex pt _ _ <- vs ] | Face vs _ <- the_faces ]
-                               
+                              
+uvShape :: Shape (V2 Double) -> Material a -> Mesh
+uvShape s m = Mesh
+          { points  = the_points
+          , normals = the_normals
+          , uvs     = case m of
+                    Material _ _ MatchUV -> fromList $ uvs
+                    _ -> V.empty
+          , materials    = fromList $ [ mt | Just mt <- [addNoUVMaterial m] ]
+          , uv_materials = fromList $ [ mt | Just mt <- [addUVMaterial   m] ]
+          , faces   = the_faces
+          }
+  where the_points = fromList $ map A.P $ map (shape_fn s) $ shape_uv $ s      
+        the_faces  = [ Face [ Vertex (PT v) (materialUV m v) (NO i) | (UV v) <- vs]
+                     $ mkMT m
+                     | (vs,i) <- shape_faces s `zip` [0..]
+                     ]
+        the_normals = fromList $ rawMeshFaceNormals $ RawMesh the_points 
+                               $ [ [ pt | Vertex pt _ _ <- vs ] | Face vs _ <- the_faces ]
+    
+        uvs = shape_uv s
 
+
+        materialUV :: Material a -> Int -> a
+        materialUV (Material _ _ MatchUV) i   = UV i
+        materialUV (Material _ _ MatchNoUV) i = ()
 
 example3 = shape cubeShape $ color (1,0,0)
+example4 = shape planeShape $ color (1,0.5,0)
+example5 = uvShape planeShape $ color (1,0.5,0)
+example6 = uvShape planeShape $ uvMaterial "dice"
+  [ Kd 1 1 1
+  , Map_Kd "dice.jpg"
+  , Illum 0
+  ]
