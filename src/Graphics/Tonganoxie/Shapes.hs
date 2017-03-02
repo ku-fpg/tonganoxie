@@ -74,43 +74,6 @@ data Shape uv = Shape
   , shape_uv    :: [uv]
   , shape_faces :: [[UV]]
   }
-{-
-lineShape :: Shape Bool
-lineShape = Shape f uvs faces
- where
-     f x = V3 (g x) 0 0
-     g False = -1
-     g True  = 1
-     uvs = [ x
-           | x <- [False,True]
-           ]
-     faces = [[UV 0]]
-
-
-planeShape :: Shape (Bool,Bool)
-planeShape = Shape f uvs faces
- where
-     f (x,y) = V3 (g x) (g y) 0
-     g False = -1
-     g True  = 1
-     uvs = [ (x,y) 
-           | x <- [False,True]
-           , y <- [False,True]
-           ]
-     faces = [map UV [0..3]]
-
-mirror :: V3 Double -> Shape a -> Shape (a,Bool)
-mirror ax (Shape f uvs faces) = Shape f' uvs' faces
- where
-     f' (a,False) = f a + ax 
-     f' (a,True)  = f a - ax
-     
-     uvs' = [ (a,uv) | uv <- [False,True], a <- uvs ]
-     faces' = []
-         
--- Can I build a cube out of a mirror'd plane?
-
--}
 
 planeShape :: Shape (V2 Double)
 planeShape = Shape f uvs faces
