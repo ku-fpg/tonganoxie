@@ -25,6 +25,12 @@ import Linear.Quaternion.Utils
 
 import Graphics.Tonganoxie.Material 
 import Graphics.Tonganoxie.Mesh
+import Graphics.Tonganoxie.Normals
+import qualified Graphics.Tonganoxie.Surface as S
+
+import Graphics.Tonganoxie.Tessellation(Tessellation)
+import qualified Graphics.Tonganoxie.Tessellation as T
+
 
  -- needs to be at least 1x1
 plane :: V2 Int -> Material a -> Mesh
@@ -160,3 +166,30 @@ example6 = uvShape planeShape $ uvMaterial "dice"
   , Map_Kd "dice.jpg"
   , Illum 0
   ]
+
+shape' :: Tessellation (Point V3 Double) -> Material () -> Mesh
+shape' tess m = Mesh
+          { points  = the_points
+          , normals = the_normals
+          , uvs     = fromList $ []
+          , materials    = fromList $ [ mt | Just mt <- [addNoUVMaterial m] ]
+          , uv_materials = fromList $ [ ]
+          , faces   = the_faces
+          }
+  where the_points = T.points tess
+        the_faces  = [ Face [Vertex p () (NO i) | p <- [a,b,c]] $ mkMT m
+                     | (V3 a b c,i) <- T.faces tess `zip` [0..]
+                     ]
+        the_normals = fromList $ map (faceNormal (T.points tess)) (T.faces tess)
+
+
+
+example7 = shape' (S.plane <$> T.tessellation (V2 1 1))
+         $ color (1,0.5,0)
+
+example8 = shape' (S.plane <$> T.tessellation (V2 10 10))
+         $ color (1,0.5,0)
+
+example9 = shape' (S.sphere <$> T.tessellation (V2 24 24))
+         $ color (1,0.5,0)
+

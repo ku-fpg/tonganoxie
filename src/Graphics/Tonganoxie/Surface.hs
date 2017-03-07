@@ -31,11 +31,15 @@ type Surface = Point V2 Double -> Point V3 Double
 
 sphere :: Surface
 sphere (A.P (V2 u v)) 
-    = A.P $ V3 (sin long)
+    = A.P $ V3 (sin long * cos lat)
                (sin lat)
-               (cos long)
+               (cos long * cos lat)
   where 
      long = u * pi * 2     -- 0 .. 2pi
      lat  = (v - 0.5) * pi -- -pi/2 ... pi/2
 
 
+plane :: Surface
+plane (A.P (V2 u v)) = A.P $ V3 (f u) (f v) 0
+  where
+      f x = x * 2 - 1               

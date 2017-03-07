@@ -26,9 +26,10 @@ import Linear.Quaternion.Utils
 import Graphics.Tonganoxie.Material 
 
 -- To make a mesh, you need to choose four things
---  * First, a 'Shape', which is typically represented by a R2 -> R3 function.
+--  * First, a 'Surface', which is typically represented by a R2 -> R3 function.
 --  * Second, a tessellation algorithm, which determines the granularity of the triangles used to create the shape.
---  * Third, the normal fidelity, which can be per-face, per-vertex with interpolation, and even finer (via bump map)
+--  * Third, the normal fidelity, which can be per-face, per-vertex (implying interpolation),
+--     and even finer (via bump map)
 --- * Fourth, a material, which may or may not have a UV mapping.
 
 -- A 'Mesh' is our key data-structure.

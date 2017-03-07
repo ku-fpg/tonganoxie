@@ -1,3 +1,5 @@
+{-# LANGUAGE GADTs, KindSignatures, StandaloneDeriving, OverloadedStrings, DeriveFunctor #-}
+
 module Graphics.Tonganoxie.Tessellation where
 
 import Data.Map.Strict (Map)
@@ -26,10 +28,11 @@ import Graphics.Tonganoxie.Material
 import Graphics.Tonganoxie.Mesh
 
 
+-- Should *this* be called Mesh?
 data Tessellation p = Tessellation
  { points :: Vector p
- , faces  :: [V3 UV]
- } deriving Show
+ , faces  :: [V3 PT]
+ } deriving (Show, Functor)
  
 -- simple and direct grid of triangles.
 tessellation :: V2 Int -> Tessellation (Point V2 Double)
@@ -46,10 +49,10 @@ tessellation (V2 x y) = Tessellation the_points the_faces
              | (u,u') <- us `zip` tail us
              , (v,v') <- vs `zip` tail vs
              , f <- [ V3 (u,v) (u,v') (u',v')
-                    , V3 (u',v') (u',v') (u,v)
+                    , V3 (u',v') (u',v) (u,v)
                     ]
              ]
-        ix (u,v) = UV $ u + v * (x + 1)
+        ix (u,v) = PT $ u + v * (x + 1)
         us = [0..x] :: [Int]
         vs = [0..y] :: [Int]
         
