@@ -27,6 +27,8 @@ import Graphics.Tonganoxie.Material
 import Graphics.Tonganoxie.Mesh
 import Graphics.Tonganoxie.Normals
 import qualified Graphics.Tonganoxie.Surface as S
+import Graphics.Tonganoxie.Surface (Surface)
+
 
 import Graphics.Tonganoxie.Tessellation(Tessellation)
 import qualified Graphics.Tonganoxie.Tessellation as T
@@ -193,3 +195,31 @@ example8 = shape' (S.plane <$> T.tessellation (V2 10 10))
 example9 = shape' (S.sphere <$> T.tessellation (V2 24 24))
          $ color (1,0.5,0)
 
+-- This has a more general type
+uvShape' :: Surface -> Tessellation (Point V2 Double) -> Material a -> Mesh
+uvShape' surface tess m = Mesh
+          { points  = the_points
+          , normals = the_normals
+          , uvs     = the_uvs
+          , materials    = fromList $ [ mt | Just mt <- [addNoUVMaterial m] ]
+          , uv_materials = fromList $ [ mt | Just mt <- [addUVMaterial   m] ]
+          , faces   = the_faces
+          }
+  where the_points = T.points tess'
+        the_faces  = [ Face [Vertex p (materialUV m p) (NO i) | p <- [a,b,c]] $ mkMT m
+                     | (V3 a b c,i) <- T.faces tess' `zip` [0..]
+                     ]
+        the_normals = fromList $ map (faceNormal (T.points tess')) (T.faces tess')
+        the_uvs = fmap (\ (A.P a) -> a) $ T.points tess
+        tess' = surface <$> tess
+
+        materialUV :: Material a -> PT -> a
+        materialUV (Material _ _ MatchUV)  (PT i)  = UV i
+        materialUV (Material _ _ MatchNoUV) (PT i) = ()
+
+example10 = uvShape' S.sphere (T.tessellation (V2 24 24))
+         $ uvMaterial "dice"
+              [ Kd 1 1 1
+              , Map_Kd "dice.jpg"
+              , Illum 0
+              ]
