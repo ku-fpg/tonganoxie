@@ -30,7 +30,7 @@ import qualified Graphics.Tonganoxie.Surface as S
 import Graphics.Tonganoxie.Types
 
 
-import Graphics.Tonganoxie.Tessellation(Tessellation)
+import Graphics.Tonganoxie.Tessellation(Mesh)
 import qualified Graphics.Tonganoxie.Tessellation as T
 
 
@@ -169,7 +169,7 @@ example6 = uvShape planeShape $ uvMaterial "dice"
   , Illum 0
   ]
 
-shape' :: Tessellation R3 -> Material () -> Object
+shape' :: Mesh R3 -> Material () -> Object
 shape' tess m = Object
           { points  = the_points
           , normals = the_normals
@@ -203,7 +203,7 @@ example9 = shape' (S.sphere <$> T.tessellation (V2 24 24))
 --
 --
 
-uvShape' :: Surface -> Tessellation R2 -> Material a -> Object
+uvShape' :: Surface -> Mesh R2 -> Material a -> Object
 uvShape' surface tess m = Object
           { points  = the_points
           , normals = the_normals

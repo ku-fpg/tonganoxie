@@ -29,15 +29,15 @@ import Graphics.Tonganoxie.Object
 import Graphics.Tonganoxie.Types
 
 
--- Should *this* be called Object?
-data Tessellation p = Tessellation
+-- | A 'Mesh' is a list of points, and a list of faces.
+data Mesh p = Mesh
  { points :: Vector p
  , faces  :: [V3 PT]
  } deriving (Show, Functor)
  
 -- simple and direct grid of triangles.
-tessellation :: V2 Int -> Tessellation (Point V2 Double)
-tessellation (V2 x y) = Tessellation the_points the_faces
+tessellation :: V2 Int -> Mesh R2
+tessellation (V2 x y) = Mesh the_points the_faces
     where
         the_points = V.fromList 
             [ A.P $ V2 (fromIntegral u / fromIntegral x)
