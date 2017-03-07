@@ -24,7 +24,7 @@ import System.FilePath (replaceExtension)
 import Linear.Quaternion.Utils
 
 import Graphics.Tonganoxie.Material 
-import Graphics.Tonganoxie.Mesh
+import Graphics.Tonganoxie.Object
 import Graphics.Tonganoxie.Types
 
 sphere :: Surface

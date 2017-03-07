@@ -15,7 +15,7 @@ cabal-version:       >=1.10
 library
   Exposed-modules:     Linear.Quaternion.Utils,
                        Graphics.Tonganoxie.Material,
-                       Graphics.Tonganoxie.Mesh,
+                       Graphics.Tonganoxie.Object,
                        Graphics.Tonganoxie.Normals,
                        Graphics.Tonganoxie.Shapes,
                        Graphics.Tonganoxie.Surface,

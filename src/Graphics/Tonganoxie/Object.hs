@@ -1,5 +1,5 @@
 {-# LANGUAGE GADTs, KindSignatures, StandaloneDeriving, OverloadedStrings #-}
-module Graphics.Tonganoxie.Mesh where
+module Graphics.Tonganoxie.Object where
 
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
@@ -26,15 +26,15 @@ import Linear.Quaternion.Utils
 import Graphics.Tonganoxie.Material 
 import Graphics.Tonganoxie.Types
 
--- To make a mesh, you need to choose four things
+-- To make a Object, you need to choose four things
 --  * First, a 'Surface', which is typically represented by a R2 -> R3 function.
 --  * Second, a tessellation algorithm, which determines the granularity of the triangles used to create the shape.
 --  * Third, the normal fidelity, which can be per-face, per-vertex (implying interpolation),
 --     and even finer (via bump map)
 --- * Fourth, a material, which may or may not have a UV mapping.
 
--- A 'Mesh' is our key data-structure.
-data Mesh = Mesh 
+-- A 'Object' is our key data-structure.
+data Object = Object 
   { points       :: Vector (Point V3 Double)
   , normals      :: Vector (V3 Double)
   , uvs          :: Vector (V2 Double)
@@ -68,21 +68,21 @@ data Vertex uv = Vertex !PT uv !NO deriving Show
 
 -- rotate using the given 'Quaternion'. The normals are preserved,
 -- because they admit the same rotation.
-rotate :: Quaternion Double -> Mesh -> Mesh
+rotate :: Quaternion Double -> Object -> Object
 rotate r m = m
   { points  = fmap (\ (A.P p) -> A.P $ Q.rotate r $ p) (points m)
   , normals = fmap (Q.rotate r) (normals m)
   }
   
 -- translate using the given 3D vector. The normals are preserved.
-translate :: V3 Double -> Mesh -> Mesh
+translate :: V3 Double -> Object -> Object
 translate dd m = m
   { points  = fmap (.+^ dd) (points m)
   }
 
 -- scale using the given 3D vector. The normals are preserved. 
 -- scale by zero makes bad things happen to normals.
-scale :: V3 Double -> Mesh -> Mesh
+scale :: V3 Double -> Object -> Object
 scale ss m = m
   { points  = fmap (\ (A.P p) -> A.P $ liftU2 (*) ss p) (points m)
   , normals = fmap (normalize . liftU2 (*) ss') (normals m)
@@ -90,8 +90,8 @@ scale ss m = m
   where ss' = fmap (1/) ss
 
 
-instance Monoid Mesh where
-    mempty = Mesh 
+instance Monoid Object where
+    mempty = Object 
            { points    = V.empty 
            , normals   = V.empty
            , uvs       = V.empty
@@ -100,7 +100,7 @@ instance Monoid Mesh where
            , faces     = []
            }
 
-    mappend m1 m2 = Mesh 
+    mappend m1 m2 = Object 
                   { points       = points  m1 V.++ points m2
                   , normals      = normals m1 V.++ normals m2
                   , uvs          = uvs     m1 V.++ uvs m2
@@ -132,8 +132,8 @@ instance Monoid Mesh where
 --------------------------------------------------------------------------------
 -- Shapes
 
-showMesh :: Mesh -> Text
-showMesh m = T.unlines $
+showObject :: Object -> Text
+showObject m = T.unlines $
         [ "# generated useing tonganoxie" ] ++
         [ T.unwords $ "v" : map showU [x,y,z] 
         | (A.P (V3 x y z)) <- toList $ points m 
@@ -169,27 +169,27 @@ showMesh m = T.unlines $
     showNO (NO i) = T.pack $ show (i + 1)
 
 -- given foo.obj, writes a foo.obj and foo.mtl file.
-writeMesh :: FilePath -> Mesh -> IO ()
-writeMesh fileName mesh = do
-    T.writeFile objFileName $ showMesh mesh
+writeObject :: FilePath -> Object -> IO ()
+writeObject fileName obj = do
+    T.writeFile objFileName $ showObject obj
     T.writeFile mtlFileName $ T.unlines $
-            (map showMaterial $ V.toList $ materials $ mesh) ++ 
-            (map showMaterial $ V.toList $ uv_materials $ mesh) 
+            (map showMaterial $ V.toList $ materials $ obj) ++ 
+            (map showMaterial $ V.toList $ uv_materials $ obj) 
 
   where
     objFileName = fileName
     mtlFileName = replaceExtension fileName "mtl"
 
 
--- Perhaps combine with Mesh?
-data RawMesh = RawMesh 
+-- Perhaps combine with Object?
+data RawObject = RawObject 
   { raw_points :: Vector (Point V3 Double)
   , raw_faces :: [[PT]]
   }
 
 
-rawMeshFaceNormals :: RawMesh -> [V3 Double]
-rawMeshFaceNormals rm = 
+rawObjectFaceNormals :: RawObject -> [V3 Double]
+rawObjectFaceNormals rm = 
     [ let A.P p1 = raw_points rm V.! i1
           A.P p2 = raw_points rm V.! i2
           A.P p3 = raw_points rm V.! i3
@@ -201,7 +201,7 @@ rawMeshFaceNormals rm =
 {-
 Add
   * ignoreUV :: Material UV -> Material ()
-  * vertexBasedNormals :: Mesh -> Mesh
+  * vertexBasedNormals :: Object -> Object
  -}
 
 

@@ -24,7 +24,7 @@ import System.FilePath (replaceExtension)
 import Linear.Quaternion.Utils
 
 import Graphics.Tonganoxie.Material 
-import Graphics.Tonganoxie.Mesh
+import Graphics.Tonganoxie.Object
 import Graphics.Tonganoxie.Normals
 import qualified Graphics.Tonganoxie.Surface as S
 import Graphics.Tonganoxie.Types
@@ -35,10 +35,10 @@ import qualified Graphics.Tonganoxie.Tessellation as T
 
 
  -- needs to be at least 1x1
-plane :: V2 Int -> Material a -> Mesh
-plane (V2 1 1) m = mesh
+plane :: V2 Int -> Material a -> Object
+plane (V2 1 1) m = obj
   where    
-    mesh = Mesh
+    obj = Object
       { points  = fromList [ A.P (V3 x y 0) | V2 x y <- fmap (fmap (\ n -> n * 2 - 1)) uvs ]
       , normals = fromList [ V3 0 0 1 ]
       , uvs     = case m of
@@ -117,8 +117,8 @@ cubeShape = Shape f uvs faces
            , [2,6,4,0]
            ]
            
-shape :: Shape a -> Material () -> Mesh
-shape s m = Mesh
+shape :: Shape a -> Material () -> Object
+shape s m = Object
           { points  = the_points
           , normals = the_normals
           , uvs     = fromList $ []
@@ -131,11 +131,11 @@ shape s m = Mesh
                      $ mkMT m
                      | (vs,i) <- shape_faces s `zip` [0..]
                      ]
-        the_normals = fromList $ rawMeshFaceNormals $ RawMesh the_points 
+        the_normals = fromList $ rawObjectFaceNormals $ RawObject the_points 
                                $ [ [ pt | Vertex pt _ _ <- vs ] | Face vs _ <- the_faces ]
                               
-uvShape :: Shape (V2 Double) -> Material a -> Mesh
-uvShape s m = Mesh
+uvShape :: Shape (V2 Double) -> Material a -> Object
+uvShape s m = Object
           { points  = the_points
           , normals = the_normals
           , uvs     = case m of
@@ -150,7 +150,7 @@ uvShape s m = Mesh
                      $ mkMT m
                      | (vs,i) <- shape_faces s `zip` [0..]
                      ]
-        the_normals = fromList $ rawMeshFaceNormals $ RawMesh the_points 
+        the_normals = fromList $ rawObjectFaceNormals $ RawObject the_points 
                                $ [ [ pt | Vertex pt _ _ <- vs ] | Face vs _ <- the_faces ]
     
         uvs = shape_uv s
@@ -169,8 +169,8 @@ example6 = uvShape planeShape $ uvMaterial "dice"
   , Illum 0
   ]
 
-shape' :: Tessellation (Point V3 Double) -> Material () -> Mesh
-shape' tess m = Mesh
+shape' :: Tessellation R3 -> Material () -> Object
+shape' tess m = Object
           { points  = the_points
           , normals = the_normals
           , uvs     = fromList $ []
@@ -195,9 +195,16 @@ example8 = shape' (S.plane <$> T.tessellation (V2 10 10))
 example9 = shape' (S.sphere <$> T.tessellation (V2 24 24))
          $ color (1,0.5,0)
 
--- This has a more general type
-uvShape' :: Surface -> Tessellation (Point V2 Double) -> Material a -> Mesh
-uvShape' surface tess m = Mesh
+-- | uvShape takes a 'Surface' and a 'Object', combines them together,
+--  and adds a 'Material'. The UV values of the 'Surface' are
+--  extracted.
+--
+--     uvShape s t m = shape (s <$> t) m, if you ignore the UV values.
+--
+--
+
+uvShape' :: Surface -> Tessellation R2 -> Material a -> Object
+uvShape' surface tess m = Object
           { points  = the_points
           , normals = the_normals
           , uvs     = the_uvs

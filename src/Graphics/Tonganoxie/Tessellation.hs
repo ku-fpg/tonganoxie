@@ -25,11 +25,11 @@ import System.FilePath (replaceExtension)
 import Linear.Quaternion.Utils
 
 import Graphics.Tonganoxie.Material 
-import Graphics.Tonganoxie.Mesh
+import Graphics.Tonganoxie.Object
 import Graphics.Tonganoxie.Types
 
 
--- Should *this* be called Mesh?
+-- Should *this* be called Object?
 data Tessellation p = Tessellation
  { points :: Vector p
  , faces  :: [V3 PT]
