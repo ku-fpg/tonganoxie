@@ -197,3 +197,14 @@ rawMeshFaceNormals rm =
           A.P p3 = raw_points rm V.! i3
       in normalize $ (p2 - p1) `cross` (p3 - p2)
     | ~(PT i1:PT i2:PT i3:_) <- raw_faces rm ]
+
+
+------------
+{-
+Add
+  * ignoreUV :: Material UV -> Material ()
+  * vertexBasedNormals :: Mesh -> Mesh
+ -}
+
+
+  
