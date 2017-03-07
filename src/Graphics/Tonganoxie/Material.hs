@@ -4,6 +4,7 @@ module Graphics.Tonganoxie.Material where
 import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
+import Graphics.Tonganoxie.Types
 
 import Numeric
 
@@ -25,10 +26,6 @@ data Match :: * -> * where
 deriving instance Show (Match a)
 deriving instance Eq (Match a)
 deriving instance Ord (Match a)
-
---  Texture  :: Text -> Material UV
-
-newtype UV = UV Int deriving Show
 
 materialMatch :: Material a -> Match a
 materialMatch (Material _ _ m) = m

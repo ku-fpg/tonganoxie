@@ -26,6 +26,7 @@ import Linear.Quaternion.Utils
 
 import Graphics.Tonganoxie.Material 
 import Graphics.Tonganoxie.Mesh
+import Graphics.Tonganoxie.Types
 
 
 -- Should *this* be called Mesh?

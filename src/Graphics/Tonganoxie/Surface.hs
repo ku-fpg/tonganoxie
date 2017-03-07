@@ -25,9 +25,7 @@ import Linear.Quaternion.Utils
 
 import Graphics.Tonganoxie.Material 
 import Graphics.Tonganoxie.Mesh
-
--- | A 'Surface' is map from UV points, to V3 points.
-type Surface = Point V2 Double -> Point V3 Double
+import Graphics.Tonganoxie.Types
 
 sphere :: Surface
 sphere (A.P (V2 u v)) 

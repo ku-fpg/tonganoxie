@@ -24,6 +24,7 @@ import System.FilePath (replaceExtension)
 import Linear.Quaternion.Utils
 
 import Graphics.Tonganoxie.Material 
+import Graphics.Tonganoxie.Types
 
 -- To make a mesh, you need to choose four things
 --  * First, a 'Surface', which is typically represented by a R2 -> R3 function.
@@ -53,9 +54,6 @@ instance Show Face where
   
 showFace :: [Vertex a] -> MT a -> String
 showFace vs (MTUV _) = "Face " ++ show (vs :: [Vertex UV])
-
-newtype PT = PT Int     deriving Show
-newtype NO = NO Int     deriving Show
 
 data MT :: * -> * where 
   MTUV   :: Int -> MT UV

@@ -27,7 +27,7 @@ import Graphics.Tonganoxie.Material
 import Graphics.Tonganoxie.Mesh
 import Graphics.Tonganoxie.Normals
 import qualified Graphics.Tonganoxie.Surface as S
-import Graphics.Tonganoxie.Surface (Surface)
+import Graphics.Tonganoxie.Types
 
 
 import Graphics.Tonganoxie.Tessellation(Tessellation)
