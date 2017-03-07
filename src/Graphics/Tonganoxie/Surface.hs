@@ -1,5 +1,5 @@
 {-# LANGUAGE GADTs, KindSignatures, StandaloneDeriving, OverloadedStrings #-}
-module Graphics.Tonganoxie.Normals where
+module Graphics.Tonganoxie.Surface where
 
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
@@ -14,7 +14,7 @@ import Linear.Affine (Point, (.+^))
 import qualified Linear.Affine as A
 import Linear.Quaternion (Quaternion)
 import qualified Linear.Quaternion as Q
-import Linear.V3 (V3(V3), cross)
+import Linear.V3 (V3(V3))
 import Linear.V2 (V2(V2))
 import Linear.Vector (liftU2)
 import Linear.Metric(normalize, distance)
@@ -26,14 +26,16 @@ import Linear.Quaternion.Utils
 import Graphics.Tonganoxie.Material 
 import Graphics.Tonganoxie.Mesh
 
+-- | A 'Surface' is map from UV points, to V3 points.
+type Surface = Point V2 Double -> Point V3 Double
 
--- Given 
-faceNormal :: Vector (Point V3 Double) -> V3 PT -> V3 Double
-faceNormal pts idxs = normalize $ (p2 - p1) `cross` (p3 - p2)
-  where V3 p1 p2 p3 = fmap f idxs
-        f :: PT -> V3 Double
-        f (PT i) = let (A.P p) = pts V.! i in p
-
-
+sphere :: Surface
+sphere (A.P (V2 u v)) 
+    = A.P $ V3 (sin long)
+               (sin lat)
+               (cos long)
+  where 
+     long = u * pi * 2     -- 0 .. 2pi
+     lat  = (v - 0.5) * pi -- -pi/2 ... pi/2
 
 
