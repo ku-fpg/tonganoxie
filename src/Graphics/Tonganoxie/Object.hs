@@ -205,4 +205,20 @@ Add
  -}
 
 
-  
+vertexBasedNormals :: Object -> Object
+vertexBasedNormals obj = obj
+      { normals      = fmap normalize
+                     $ V.accum (+) (fmap (const 0) (points obj))
+                     $ [ (p,normals obj V.! n)
+                       | Face vs m <- faces obj
+                       , Vertex (PT p) _ (NO n) <- vs
+                       ]
+      , faces        = [ Face [ Vertex (PT n) uv (NO n) | Vertex (PT n) uv _ <- vs ] m
+                       | Face vs m <- faces obj 
+                       ]
+      }   
+
+-- | snap together any points that are really close.
+
+snap :: Object -> Object
+snap = id
