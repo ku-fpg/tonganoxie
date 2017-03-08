@@ -26,17 +26,21 @@ import Linear.Quaternion.Utils
 
 import Graphics.Tonganoxie.Material 
 import Graphics.Tonganoxie.Object
-import Graphics.Tonganoxie.Types
+import Graphics.Tonganoxie.Types as T
 
 
 -- | A 'Mesh' is a list of points, and a list of faces.
-data Mesh p = Mesh
+data Mesh g p = Mesh
  { points :: Vector p
- , faces  :: [V3 PT]
- } deriving (Show, Functor)
+ , faces  :: [g PT]
+ } deriving (Functor)
  
+instance (Show p, Polygon g) => Show (Mesh g p) where
+    show (Mesh p f) = show (p,map vertices f)
+
+
 -- simple and direct grid of triangles.
-tessellation :: V2 Int -> Mesh R2
+tessellation :: V2 Int -> Mesh V3 R2
 tessellation (V2 x y) = Mesh the_points the_faces
     where
         the_points = V.fromList 

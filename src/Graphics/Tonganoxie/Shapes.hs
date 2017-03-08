@@ -3,6 +3,8 @@ module Graphics.Tonganoxie.Shapes where
 
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
+import Data.Foldable(Foldable)
+import qualified Data.Foldable as F
 import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -169,7 +171,7 @@ example6 = uvShape planeShape $ uvMaterial "dice"
   , Illum 0
   ]
 
-shape' :: Mesh R3 -> Material () -> Object
+shape' :: Foldable g => Mesh g R3 -> Material () -> Object
 shape' tess m = Object
           { points  = the_points
           , normals = the_normals
@@ -179,17 +181,18 @@ shape' tess m = Object
           , faces   = the_faces
           }
   where the_points = T.points tess
-        the_faces  = [ Face [Vertex p () (NO i) | p <- [a,b,c]] $ mkMT m
-                     | (V3 a b c,i) <- T.faces tess `zip` [0..]
+        the_faces  = [ Face [Vertex p () (NO i) | p <- F.toList g] $ mkMT m
+                     | (g,i) <- T.faces tess `zip` [0..]
                      ]
         the_normals = fromList $ map (faceNormal (T.points tess)) (T.faces tess)
-
-
 
 example7 = shape' (S.plane <$> T.tessellation (V2 1 1))
          $ color (1,0.5,0)
 
 example8 = shape' (S.plane <$> T.tessellation (V2 10 10))
+         $ color (1,0.5,0)
+
+example9' = shape' (S.sphere <$> T.tessellation (V2 10 10))
          $ color (1,0.5,0)
 
 example9 = shape' (S.sphere <$> T.tessellation (V2 24 24))
@@ -199,11 +202,11 @@ example9 = shape' (S.sphere <$> T.tessellation (V2 24 24))
 --  and adds a 'Material'. The UV values of the 'Surface' are
 --  extracted.
 --
---     uvShape s t m = shape (s <$> t) m, if you ignore the UV values.
+--     uvShape s t m = shape (s <$> t) m, if you ignore the UV values;
 --
 --
 
-uvShape' :: Surface -> Mesh R2 -> Material a -> Object
+uvShape' :: Foldable g => Surface -> Mesh g R2 -> Material a -> Object
 uvShape' surface tess m = Object
           { points  = the_points
           , normals = the_normals
@@ -213,8 +216,8 @@ uvShape' surface tess m = Object
           , faces   = the_faces
           }
   where the_points = T.points tess'
-        the_faces  = [ Face [Vertex p (materialUV m p) (NO i) | p <- [a,b,c]] $ mkMT m
-                     | (V3 a b c,i) <- T.faces tess' `zip` [0..]
+        the_faces  = [ Face [Vertex p (materialUV m p) (NO i) | p <- F.toList g] $ mkMT m
+                     | (g,i) <- T.faces tess' `zip` [0..]
                      ]
         the_normals = fromList $ map (faceNormal (T.points tess')) (T.faces tess')
         the_uvs = fmap (\ (A.P a) -> a) $ T.points tess
@@ -224,7 +227,7 @@ uvShape' surface tess m = Object
         materialUV (Material _ _ MatchUV)  (PT i)  = UV i
         materialUV (Material _ _ MatchNoUV) (PT i) = ()
 
-example10 = uvShape' S.sphere (T.tessellation (V2 24 24))
+example10 = uvShape' S.sphere (T.tessellation (V2 50 50))
          $ uvMaterial "dice"
               [ Kd 1 1 1
               , Map_Kd "dice.jpg"

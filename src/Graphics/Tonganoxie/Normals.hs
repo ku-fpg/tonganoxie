@@ -1,6 +1,8 @@
 {-# LANGUAGE GADTs, KindSignatures, StandaloneDeriving, OverloadedStrings #-}
 module Graphics.Tonganoxie.Normals where
 
+import Data.Foldable(Foldable)
+import qualified Data.Foldable as F
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Monoid ((<>))
@@ -31,9 +33,9 @@ import Graphics.Tonganoxie.Types
 
 
 -- Given 
-faceNormal :: Vector (Point V3 Double) -> V3 PT -> V3 Double
+faceNormal :: Foldable g => Vector (Point V3 Double) -> g PT -> V3 Double
 faceNormal pts idxs = normalize $ (p2 - p1) `cross` (p3 - p2)
-  where V3 p1 p2 p3 = fmap f idxs
+  where (p1:p2:p3:_) = fmap f (F.toList idxs)
         f :: PT -> V3 Double
         f (PT i) = let (A.P p) = pts V.! i in p
 
