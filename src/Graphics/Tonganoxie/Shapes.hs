@@ -43,8 +43,8 @@ mkMT (Material _ _ MatchNoUV) = MTNoUV 0
 
            
 
-shape' :: Foldable g => Mesh g R3 -> Material () -> Object
-shape' tess m = Object
+shape :: Foldable g => Mesh g R3 -> Material () -> Object
+shape tess m = Object
           { points  = the_points
           , normals = the_normals
           , uvs     = fromList $ []
@@ -58,16 +58,16 @@ shape' tess m = Object
                      ]
         the_normals = fromList $ map (faceNormal (T.points tess)) (T.faces tess)
 
-example7 = shape' (S.plane <$> T.tessellation (V2 1 1))
+example7 = shape (S.plane <$> T.tessellation (V2 1 1))
          $ color (1,0.5,0)
 
-example8 = shape' (S.plane <$> T.tessellation (V2 10 10))
+example8 = shape (S.plane <$> T.tessellation (V2 10 10))
          $ color (1,0.5,0)
 
-example9' = shape' (S.sphere <$> T.tessellation (V2 4 4))
+example9' = shape (S.sphere <$> T.tessellation (V2 4 4))
          $ color (1,0.5,0)
 
-example9 = shape' (S.sphere <$> T.tessellation (V2 24 24))
+example9 = shape (S.sphere <$> T.tessellation (V2 24 24))
          $ color (1,0.5,0)
 
 -- | uvShape takes a 'Surface' and a 'Object', combines them together,
@@ -78,8 +78,8 @@ example9 = shape' (S.sphere <$> T.tessellation (V2 24 24))
 --
 --
 
-uvShape' :: Foldable g => Surface -> Mesh g R2 -> Material a -> Object
-uvShape' surface tess m = Object
+uvShape :: Foldable g => Surface -> Mesh g R2 -> Material a -> Object
+uvShape surface tess m = Object
           { points  = the_points
           , normals = the_normals
           , uvs     = the_uvs
@@ -99,12 +99,12 @@ uvShape' surface tess m = Object
         materialUV (Material _ _ MatchUV)  (PT i)  = UV i
         materialUV (Material _ _ MatchNoUV) (PT i) = ()
 
-example10 = uvShape' S.sphere (T.tessellation (V2 50 50))
+example10 = uvShape S.sphere (T.tessellation (V2 12 12))
          $ uvMaterial "dice"
               [ Kd 1 1 1
               , Map_Kd "dice.jpg"
               , Illum 0
               ]
 
-example11 = shape' (T.cubeMesh)
+example11 = shape (T.cubeMesh)
          $ color (1,0.5,0)
