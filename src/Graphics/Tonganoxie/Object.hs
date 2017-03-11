@@ -5,6 +5,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Monoid ((<>))
 import Data.Text (Text)
+import Data.List as L
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Vector (Vector, toList, fromList)
@@ -20,6 +21,7 @@ import Linear.Vector (liftU2)
 import Linear.Metric(normalize, distance, dot)
 
 import System.FilePath (replaceExtension)
+import qualified Data.Foldable as F
 
 import Linear.Quaternion.Utils
 
@@ -208,14 +210,11 @@ Add
 
 vertexBasedNormals :: Double -> Object -> Object
 vertexBasedNormals angle obj = obj
-      { normals      = fmap normalize
-                     $ V.accum (+) (fmap (const 0) (points obj))
-                     $ [ (p,normals obj V.! n)
-                       | Face vs m <- faces obj
-                       , Vertex (PT p) _ (NO n) <- vs
-                       ]
-      , faces        = [ Face [ Vertex (PT n) uv (NO n) | Vertex (PT n) uv _ <- vs ] m
-                       | Face vs m <- faces obj
+      { normals      = normals3
+      , faces        = [ Face [ Vertex (PT p) uv (rev_map M.! n) 
+                              | (Vertex (PT p) uv _,n) <- vs `zip` ns 
+                              ] m
+                       | (Face vs m,ns) <- faces obj `zip` normals2
                        ]
       }
  where
@@ -235,18 +234,21 @@ vertexBasedNormals angle obj = obj
 
   normals2 :: [[V3 Double]]
   normals2 = [ [ normalize $ sum
-                             [ v
-                             | v <- normals1 V.! p
-                             , v `dot` no >= edge_threshhold
-                             ]
+                 [ v
+                 | v <- normals1 V.! p
+                 , v `dot` no >= edge_threshhold
+                 ]
                | Vertex (PT p) _ (NO n) <- vs 
                , let no = normals obj V.! n
                ]
              | Face vs m <- faces obj
              ]
 
-  
+  normals3 :: Vector (V3 Double)
+  normals3 = V.fromList $ concat normals2
 
+  rev_map :: Map (V3 Double) NO
+  rev_map = M.fromList $ zip (V.toList normals3) $ map NO $ [0..]
 
          
 
