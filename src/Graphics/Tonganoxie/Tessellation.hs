@@ -17,6 +17,7 @@ import Linear.Quaternion (Quaternion)
 import qualified Linear.Quaternion as Q
 import Linear.V3 (V3(V3), cross)
 import Linear.V2 (V2(V2))
+import Linear.V4 (V4(V4))
 import Linear.Vector (liftU2)
 import Linear.Metric(normalize, distance)
 
@@ -25,7 +26,7 @@ import System.FilePath (replaceExtension)
 import Linear.Quaternion.Utils
 
 import Graphics.Tonganoxie.Material 
-import Graphics.Tonganoxie.Object
+-- import Graphics.Tonganoxie.Object hiding (points, faces)
 import Graphics.Tonganoxie.Types as T
 
 
@@ -37,7 +38,6 @@ data Mesh g p = Mesh
  
 instance (Show p, Polygon g) => Show (Mesh g p) where
     show (Mesh p f) = show (p,map vertices f)
-
 
 -- simple and direct grid of triangles.
 tessellation :: V2 Int -> Mesh V3 R2
@@ -61,3 +61,23 @@ tessellation (V2 x y) = Mesh the_points the_faces
         us = [0..x] :: [Int]
         vs = [0..y] :: [Int]
         
+-- A Cube Mesh is Quads(V4) in 3D(R3)
+cubeMesh :: Mesh V4 R3
+cubeMesh = Mesh
+  { points = V.fromList 
+          [ A.P $ V3 x y z
+          | x <- [-1,1]
+          , y <- [-1,1]
+          , z <- [-1,1]
+          ]
+  , faces  = fmap (fmap PT) 
+           $ [V4 0 1 3 2
+             ,V4 6 7 6 4
+             ,V4 0 4 5 1
+             ,V4 1 5 7 3
+             ,V4 3 7 6 2
+             ,V4 2 6 4 0
+             ]
+  }
+
+
