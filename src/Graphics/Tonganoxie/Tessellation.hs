@@ -72,7 +72,7 @@ cubeMesh = Mesh
           ]
   , faces  = fmap (fmap PT) 
            $ [V4 0 1 3 2
-             ,V4 6 7 6 4
+             ,V4 6 7 5 4
              ,V4 0 4 5 1
              ,V4 1 5 7 3
              ,V4 3 7 6 2
