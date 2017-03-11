@@ -233,3 +233,6 @@ example10 = uvShape' S.sphere (T.tessellation (V2 50 50))
               , Map_Kd "dice.jpg"
               , Illum 0
               ]
+
+example11 = shape' (T.cubeMesh)
+         $ color (1,0.5,0)
