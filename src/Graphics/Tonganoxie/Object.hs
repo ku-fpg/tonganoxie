@@ -206,8 +206,8 @@ Add
  -}
 
 
-vertexBasedNormals :: Object -> Object
-vertexBasedNormals obj = obj
+vertexBasedNormals :: Double -> Object -> Object
+vertexBasedNormals angle obj = obj
       { normals      = fmap normalize
                      $ V.accum (+) (fmap (const 0) (points obj))
                      $ [ (p,normals obj V.! n)
@@ -215,9 +215,40 @@ vertexBasedNormals obj = obj
                        , Vertex (PT p) _ (NO n) <- vs
                        ]
       , faces        = [ Face [ Vertex (PT n) uv (NO n) | Vertex (PT n) uv _ <- vs ] m
-                       | Face vs m <- faces obj 
+                       | Face vs m <- faces obj
                        ]
-      }   
+      }
+ where
+
+  -- dot value from comparing normals
+  -- 1 == same, 0 == perpendicual, 0.707 == 45 degrees.
+  -- So, setting angle to (pi/8) should get the sharp edges.
+  edge_threshhold = cos angle
+  
+  -- select all the normals for each vertex, as a list
+  normals1 :: Vector [V3 Double]
+  normals1 = V.accum (flip (:)) (fmap (const []) (points obj))
+           $ [ (p,normals obj V.! n)
+             | Face vs m <- faces obj
+             , Vertex (PT p) _ (NO n) <- vs
+             ] 
+
+  normals2 :: [[V3 Double]]
+  normals2 = [ [ normalize $ sum
+                             [ v
+                             | v <- normals1 V.! p
+                             , v `dot` no >= edge_threshhold
+                             ]
+               | Vertex (PT p) _ (NO n) <- vs 
+               , let no = normals obj V.! n
+               ]
+             | Face vs m <- faces obj
+             ]
+
+  
+
+
+         
 
 -- | snap together any points that are really close.
 
