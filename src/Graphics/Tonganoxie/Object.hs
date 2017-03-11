@@ -186,31 +186,6 @@ writeObject fileName obj = do
     objFileName = fileName
     mtlFileName = replaceExtension fileName "mtl"
 
-
--- Perhaps combine with Object?
-data RawObject = RawObject 
-  { raw_points :: Vector (Point V3 Double)
-  , raw_faces :: [[PT]]
-  }
-
-
-rawObjectFaceNormals :: RawObject -> [V3 Double]
-rawObjectFaceNormals rm = 
-    [ let A.P p1 = raw_points rm V.! i1
-          A.P p2 = raw_points rm V.! i2
-          A.P p3 = raw_points rm V.! i3
-      in normalize $ (p2 - p1) `cross` (p3 - p2)
-    | ~(PT i1:PT i2:PT i3:_) <- raw_faces rm ]
-
-
-------------
-{-
-Add
-  * ignoreUV :: Material UV -> Material ()
-  * vertexBasedNormals :: Object -> Object
- -}
-
-
 -- | 'vertexBasedNormals' adds normals to the vertex.
 --   The number of a radian of what constitutes a sharp edge. 
 --   The smaller the number, then more sharp edges appear 
