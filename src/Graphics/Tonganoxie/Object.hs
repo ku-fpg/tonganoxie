@@ -171,7 +171,8 @@ showObject m = T.unlines $
 -- given foo.obj, writes a foo.obj and foo.mtl file.
 writeObject :: FilePath -> Object -> IO ()
 writeObject fileName obj = do
-    T.writeFile objFileName $ showObject obj
+    T.writeFile objFileName $ 
+            "mtllib " <> T.pack mtlFileName <> "\n" <> showObject obj
     T.writeFile mtlFileName $ T.unlines $
             (map showMaterial $ V.toList $ materials $ obj) ++ 
             (map showMaterial $ V.toList $ uv_materials $ obj) 
