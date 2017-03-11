@@ -13,6 +13,7 @@ import qualified Data.Vector as V
 
 import Linear.Affine (Point, (.+^)) 
 import qualified Linear.Affine as A
+import Linear.Epsilon
 import Linear.Quaternion (Quaternion)
 import qualified Linear.Quaternion as Q
 import Linear.V3 (V3(V3),cross)
@@ -27,6 +28,8 @@ import Linear.Quaternion.Utils
 
 import Graphics.Tonganoxie.Material 
 import Graphics.Tonganoxie.Types
+
+import Debug.Trace
 
 -- To make a Object, you need to choose four things
 --  * First, a 'Surface', which is typically represented by a R2 -> R3 function.
@@ -240,7 +243,8 @@ vertexBasedNormals angle obj = obj
   normals2 = [ [ normalize $ sum
                  [ v
                  | v <- normals1 V.! p
-                 , v `dot` no >= edge_threshhold
+                 , let okay = v `dot` no >= edge_threshhold || nearZero ((v `dot` no) - edge_threshhold)
+                 , okay
                  ]
                | Vertex (PT p) _ (NO n) <- vs 
                , let no = normals obj V.! n
