@@ -208,6 +208,10 @@ Add
  -}
 
 
+-- | 'vertexBasedNormals' adds normals to the vertex.
+--   The number of a radian of what constitutes a sharp edge. 
+--   The smaller the number, then more sharp edges appear 
+--   in the final Object. pi/8 seems a reasonable number.
 vertexBasedNormals :: Double -> Object -> Object
 vertexBasedNormals angle obj = obj
       { normals      = normals3
