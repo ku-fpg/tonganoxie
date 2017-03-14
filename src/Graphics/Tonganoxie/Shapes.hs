@@ -35,6 +35,7 @@ import Graphics.Tonganoxie.Types
 import Graphics.Tonganoxie.Tessellation(Mesh)
 import qualified Graphics.Tonganoxie.Tessellation as T
 
+import Linear.Epsilon
 
 
 mkMT :: Material a -> MT a
@@ -65,6 +66,9 @@ example8 = shape (S.plane <$> T.tessellation (V2 10 10))
          $ color (1,0.5,0)
 
 example9' = shape (S.sphere <$> T.tessellation (V2 4 4))
+         $ color (1,0.5,0)
+
+example9'' = shape (S.sphere <$> T.tessellation (V2 10 10))
          $ color (1,0.5,0)
 
 example9 = shape (S.sphere <$> T.tessellation (V2 24 24))
