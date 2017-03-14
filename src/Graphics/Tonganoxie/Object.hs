@@ -19,7 +19,7 @@ import qualified Linear.Quaternion as Q
 import Linear.V3 (V3(V3),cross)
 import Linear.V2 (V2(V2))
 import Linear.Vector (liftU2)
-import Linear.Metric(normalize, distance, dot)
+import Linear.Metric(normalize, distance, dot, qd, Metric)
 
 import System.FilePath (replaceExtension)
 import qualified Data.Foldable as F
@@ -219,6 +219,7 @@ vertexBasedNormals angle obj = obj
                  [ v
                  | v <- normals1 V.! p
                  , let okay = v `dot` no >= edge_threshhold || nearZero ((v `dot` no) - edge_threshhold)
+--                 , traceShow (v,no,v `dot` no,edge_threshhold,okay) True
                  , okay
                  ]
                | Vertex (PT p) _ (NO n) <- vs 
@@ -233,9 +234,24 @@ vertexBasedNormals angle obj = obj
   rev_map :: Map (V3 Double) NO
   rev_map = M.fromList $ zip (V.toList normals3) $ map NO $ [0..]
 
-         
 
--- | snap together any points that are really close.
+-- | blend together any points that are really close.
+--  Not that this may change the mesh graph.
 
-snap :: Object -> Object
-snap = id
+blend :: Object -> Object
+blend mesh = mesh 
+      { faces = [ Face (fmap f fs) m | Face fs m <- faces mesh ]
+      }
+  where
+      f :: Vertex a -> Vertex a
+      f (Vertex (PT p) uv n) = Vertex (PT (pointsIx V.! p)) uv n
+      
+      pointsIx :: Vector Int
+      pointsIx = fmap (V.length        . 
+                       V.takeWhile not . 
+                       fmap nearZero   . 
+                       flip fmap (points mesh) .
+                       qd) 
+               $ points 
+               $ mesh
+
