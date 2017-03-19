@@ -247,11 +247,11 @@ blend mesh = mesh
       f (Vertex (PT p) uv n) = Vertex (PT (pointsIx V.! p)) uv n
       
       pointsIx :: Vector Int
-      pointsIx = fmap (V.length        . 
-                       V.takeWhile not . 
-                       fmap nearZero   . 
-                       flip fmap (points mesh) .
-                       qd) 
+      pointsIx = fmap ( length
+                      . takeWhile not 
+                      . fmap nearZero
+                      . flip fmap (V.toList $ points mesh)
+                      . qd) 
                $ points 
                $ mesh
 
