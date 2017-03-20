@@ -1,10 +1,16 @@
 {-# LANGUAGE GADTs, KindSignatures, RankNTypes, StandaloneDeriving, DefaultSignatures, FlexibleInstances, OverloadedStrings #-}
 module Graphics.Tonganoxie.Material where
 
+import Data.Char as C
 import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import Graphics.Tonganoxie.Types
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as M
+import Data.Vector (Vector, toList, fromList)
+import qualified Data.Vector as V
 
 import Numeric
 
@@ -118,4 +124,78 @@ uvMaterial nm defs = Material nm defs MatchUV
 material :: Text -> [Def ()] -> Material ()
 material nm defs = Material nm defs MatchNoUV
 
+mapUV :: Material a -> Material UV
+mapUV (Material nm defs _) = uvMaterial nm (map mUV defs) 
+  where
+        mUV :: Def a -> Def UV
+        mUV (Ka r g b) = Ka r g b
+        mUV (Kd r g b) = Kd r g b
+        mUV (Ks r g b) = Ks r g b
+        mUV (Ns d)     = Ns d
+        mUV (Map_Ka f) = Map_Ka f
+        mUV (Map_Kd f) = Map_Kd f
+        mUV (Illum i)  = Illum i
+        mUV (D d)      = D d
+
+------------------------------------------------------------
+data Materials :: * where
+  Materials :: [Material ()] -> [Material UV] -> Materials
+
+deriving instance Show Materials
+
+-- | Material files are mappings from material names to materials.
+readMaterials :: FilePath -> IO Materials
+readMaterials fileName = do
+    txt <- readFile fileName
+    return $ mtlParser $ txt
+    
+data MtlLexeme 
+  = MtlNew Text
+  | MtlDef   (forall a . Def a)
+  | MtlDefUV (Def UV)
+  
+deriving instance Show MtlLexeme  
+  
+mtlLexer :: String -> [MtlLexeme]
+mtlLexer = concatMap lexer . map words . lines 
+  where
+      lexer :: [String] -> [MtlLexeme]
+      lexer ["newmtl",mtl] = [MtlNew (T.pack mtl)]
+      lexer ["Ka",r,g,b] = [MtlDef $ Ka (read r) (read g) (read b)]
+      lexer ["Kd",r,g,b] = [MtlDef $ Kd (read r) (read g) (read b)]
+      lexer ["map_Kd",f] = [MtlDefUV $ Map_Kd (T.pack f)]
+      lexer ["illum",i]  = [MtlDef $ Illum (read i)]
+      lexer [] = []
+      lexer ("#":_) = []
+      lexer ln = error $ ".mtl lexer error " ++ show ln
+
+mtlParser :: String -> Materials
+mtlParser = find (Materials [] []) . mtlLexer
+  where
+      find :: Materials -> [MtlLexeme] -> Materials
+      find ms (MtlNew nm : rest) = findU ms (material nm []) rest
+      find ms (lx : _) = error $ "extra text before material name" ++ show lx
+      find ms [] = ms
+
+      findU :: Materials -> Material () -> [MtlLexeme] -> Materials
+      findU ms (Material nm defs mx) (MtlDef d : rest) = 
+          findU ms (Material nm (defs ++ [d]) mx) rest
+      findU ms m (MtlDefUV d : rest) = case mapUV m of
+          Material nm defs mx -> findUV ms (Material nm (defs ++ [d]) mx) rest
+      findU ms m rest = find (case ms of
+           Materials ms ms_uv -> Materials (ms ++ [m]) ms_uv) rest
+          
+      findUV :: Materials -> Material UV -> [MtlLexeme] -> Materials
+      findUV ms (Material nm defs mx) (MtlDef d : rest) = 
+          findUV ms (Material nm (defs ++ [d]) mx) rest
+      findUV ms (Material nm defs mx) (MtlDefUV d : rest) = 
+          findUV ms (Material nm (defs ++ [d]) mx) rest
+      findUV ms m rest = find (case ms of
+           Materials ms ms_uv -> Materials ms (ms_uv ++ [m])) rest
+
+writeMaterial :: FilePath -> Materials -> IO ()
+writeMaterial fileName (Materials mts uv_mts) = do
+    T.writeFile fileName $ T.unlines $
+            (map showMaterial $ mts) ++ 
+            (map showMaterial $ uv_mts) 
 
