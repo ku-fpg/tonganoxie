@@ -1,6 +1,9 @@
 {-# LANGUAGE GADTs, KindSignatures, StandaloneDeriving, OverloadedStrings #-}
 module Graphics.Tonganoxie.Object where
 
+import qualified Codec.Wavefront.IO as WF
+import qualified Codec.Wavefront    as WF
+
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Monoid ((<>))
@@ -26,7 +29,7 @@ import qualified Data.Foldable as F
 
 import Linear.Quaternion.Utils
 
-import Graphics.Tonganoxie.Material 
+import Graphics.Tonganoxie.Material
 import Graphics.Tonganoxie.Types
 
 import Debug.Trace
@@ -178,10 +181,9 @@ writeObject :: FilePath -> Object -> IO ()
 writeObject fileName obj = do
     T.writeFile objFileName $ 
             "mtllib " <> T.pack mtlFileName <> "\n" <> showObject obj
-    T.writeFile mtlFileName $ T.unlines $
-            (map showMaterial $ V.toList $ materials $ obj) ++ 
-            (map showMaterial $ V.toList $ uv_materials $ obj) 
-
+    writeMaterial mtlFileName $ Materials
+            (V.toList $ materials $ obj)
+            (V.toList $ uv_materials $ obj) 
   where
     objFileName = fileName
     mtlFileName = replaceExtension fileName "mtl"
