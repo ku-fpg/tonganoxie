@@ -217,13 +217,11 @@ readObject fileName = do
                                  | (ix,Material nm _ _) <- [0..] `zip` msU 
                                  ]
             
-        -- A (sub)-mesh with UV can still use a non-UV material.
-        -- Hence the extra mapUV msU.
         let msUV =
                 [ m 
                 | Materials _ ms <- mss
                 , m <- ms
-                ] ++ fmap mapUV msU
+                ] 
 
         let msUV_map :: Map Text (MT UV)
             msUV_map = M.fromList [ (nm,MTUV ix)
@@ -238,7 +236,7 @@ readObject fileName = do
         -- wfFaceNormal                      
         let wfFaceNormal :: WF.Element WF.Face -> V3 Double
             wfFaceNormal (WF.Element _ _ _ _ (WF.Face p1 p2 p3 _)) = 
-                faceNormal all_points [PT i | WF.FaceIndex i _ _ <- [p1,p2,p3]]
+                faceNormal all_points [PT (i-1) | WF.FaceIndex i _ _ <- [p1,p2,p3]]
 
         let all_normals = ( fmap (fmap float2Double)
                             $ fmap (\ (WF.Normal x y z) -> V3 x y z) 
@@ -253,21 +251,21 @@ readObject fileName = do
 
         let parseFaceIndexUV :: NO -> WF.FaceIndex -> Maybe (Vertex UV)
             parseFaceIndexUV def_no (WF.FaceIndex pt_ix opt_uv opt_no) = do
-                    let pt = PT pt_ix
-                    uv <- fmap UV opt_uv -- This is the point that can fail
+                    let pt = PT (pt_ix-1)
+                    uv <- fmap (UV . pred) opt_uv -- This is the point that can fail
                     let no = case opt_no of
-                               Just no_ix -> NO no_ix
+                               Just no_ix -> NO (no_ix - 1)
                                Nothing    -> def_no
                     return $ Vertex pt uv no
 
         let parseFaceIndexNoUV :: NO -> WF.FaceIndex -> Maybe (Vertex ())
             parseFaceIndexNoUV def_no (WF.FaceIndex pt_ix opt_uv opt_no) = do
-                    let pt = PT pt_ix
+                    let pt = PT (pt_ix-1)
                     uv <- case opt_uv of
                             Nothing -> return ()
                             Just _ -> fail "UV found when none was expected"
                     let no = case opt_no of
-                               Just no_ix -> NO no_ix
+                               Just no_ix -> NO (no_ix-1)
                                Nothing    -> def_no
                     return $ Vertex pt uv no
 
@@ -275,7 +273,12 @@ readObject fileName = do
             parseFaceUV no (WF.Element _ _ optMtl _ (WF.Face i1 i2 i3 is)) = do
                 face_vs <- sequence [ parseFaceIndexUV no i| i <- [i1,i2,i3] ++ is]
                 mtl_nm <- optMtl
-                mt <- M.lookup mtl_nm msUV_map
+                mt <- case M.lookup mtl_nm msUV_map of
+                        Nothing -> case M.lookup mtl_nm msU_map of
+                                     Just (MTNoUV mt') -> return (MTIgUV mt')
+                                     Just _ -> error "internal error"
+                                     Nothing -> fail "not found material"
+                        Just mt' -> return mt'                  
                 return $ Face face_vs mt
 
             parseFaceNoUV :: NO -> WF.Element WF.Face -> Maybe Face
