@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wall #-}
 module Graphics.Tonganoxie.Types where
 
 import Linear.Affine (Point)

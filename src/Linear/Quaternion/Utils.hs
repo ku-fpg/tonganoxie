@@ -1,14 +1,11 @@
+{-# OPTIONS_GHC -Wall -fno-warn-orphans #-}
 module Linear.Quaternion.Utils where
 
-import Linear.Affine
 import Linear.Epsilon
 import Linear.Matrix as M
 import Linear.Metric
 import Linear.Quaternion
 import Linear.V3 (V3(..),cross)
-import Linear.Vector
-
-import qualified Debug.Trace as D
 
 {- | This is an alternative to the Quaternion format,
      following the THREE.js representation of Euler.
@@ -45,9 +42,9 @@ extrinsic Euler rotation of angles c, b, a about ZYX."
 
 data Euler a = Euler 
      { order :: Order
-     , x :: a
-     , y :: a
-     , z :: a
+     , xRot :: a
+     , yRot :: a
+     , zRot :: a
      }
      deriving (Eq, Ord, Show, Read)
 
@@ -55,6 +52,8 @@ data Order = XYZ | XZY | YXZ | YZX | ZXY | ZYX
      deriving (Eq, Ord, Show, Read)
 
 {-# RULES "reorder" forall o v . reorder (invert o) (reorder o v) = v  #-}
+{-# NOINLINE reorder #-}
+{-# NOINLINE invert #-}
 
 -- | Reorder a V3, assuming X-Y-Z, into the given order.
 --
@@ -86,23 +85,16 @@ invert XZY = XZY
 invert YXZ = YXZ
 invert YZX = ZXY
 invert ZXY = YZX
-invert ZYX = ZYX
-{-
-     vX = V3 1 0 0
-     vY = V3 0 1 0
-     vZ = V3 0 0 1
--}
-
-    
+invert ZYX = ZYX    
 
 -- | Convert a 'Quaternion' into a (ordered) 'Euler'.
 quaternionToEuler :: (Epsilon a, RealFloat a) => Order -> Quaternion a -> Euler a
 quaternionToEuler o q = Euler o rX rY rZ
   where
      -- adapted from https://github.com/mrdoob/three.js/blob/master/src/math/Euler.js
-     V3 (V3 m11 m12 m13)
-        (V3 m21 m22 m23)
-        (V3 m31 m32 m33) = reorder o $ transpose $ reorder o $ transpose $ fromQuaternion q
+     V3 (V3 m11  m12  m13)
+        (V3 _m21 m22  m23)
+        (V3 _m31 m32  m33) = reorder o $ transpose $ reorder o $ transpose $ fromQuaternion q
 
      V3 a1 a2 a3 = reorder o $ V3 xAxis yAxis zAxis :: V3 (V3 Int)
      -- Does order reflect right-hand rule, or does it need inverted.
@@ -139,9 +131,6 @@ betweenq v1 v2
     n_v2 = normalize v2
     c = cross n_v1 n_v2
     d = max (-1) $ min 1 $ dot n_v1 n_v2
-    ca = acos d
-
--- for a slightly better solution
 
 orthogonal :: (Ord a, Num a) => V3 a -> V3 a
 orthogonal v = cross v other
