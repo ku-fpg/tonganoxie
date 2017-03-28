@@ -239,10 +239,10 @@ vertexBasedNormals angle obj = obj
 
 
 -- | blend together any points that are really close.
---  Not that this may change the mesh graph.
+--  Note that this may change the mesh graph.
 
-blend :: Object -> Object
-blend mesh = mesh 
+blendMesh :: Object -> Object
+blendMesh mesh = mesh 
       { faces = [ Face (fmap f fs) m | Face fs m <- faces mesh ]
       }
   where
