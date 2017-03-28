@@ -64,14 +64,14 @@ instance Show Face where
   -- in every Face constructor
   show (Face vs mt@(MTUV _))   = "Face " ++ show vs ++ " " ++ show mt
   show (Face vs mt@(MTNoUV _)) = "Face " ++ show vs ++ " " ++ show mt
+  show (Face vs mt@(MTIgUV _)) = "Face " ++ show vs ++ " " ++ show mt
   
-showFace :: [Vertex a] -> MT a -> String
-showFace vs (MTUV _) = "Face " ++ show (vs :: [Vertex UV])
-
 data MT :: * -> * where 
-  MTUV   :: Int -> MT UV
-  MTNoUV :: Int -> MT ()
-  
+  MTUV   :: Int -> MT UV -- use a UV-based material with a UV mesh
+  MTNoUV :: Int -> MT () -- use a non-UV-based material with a non-UV mesh
+  MTIgUV :: Int -> MT UV -- use a non-UV-based material with a **UV mesh**
+                         -- There is no 4th case; this is what we want to avoid
+
 deriving instance Show (MT a)
 
 data Vertex uv = Vertex !PT uv !NO deriving Show
@@ -135,12 +135,14 @@ instance Monoid Object where
               = Vertex (PT (a + pOff)) (incUV m c) (NO (b + nOff)) 
 
            incUV :: MT uv ->  uv -> uv
-           incUV (MTNoUV _) ()     = ()
-           incUV (MTUV   _) (UV i) = UV (i + uvOff)
+           incUV (MTUV   _)   (UV i) = UV (i + uvOff)
+           incUV (MTNoUV _)   ()     = ()
+           incUV (MTIgUV   _) (UV i) = UV (i + uvOff)
 
            incM :: MT uv -> MT uv
-           incM (MTNoUV i) = MTNoUV (i + mOff)
            incM (MTUV   i) = MTUV   (i + uv_mOff)
+           incM (MTNoUV i) = MTNoUV (i + mOff)
+           incM (MTIgUV i) = MTIgUV (i + mOff) -- The material non-UV
 
 --------------------------------------------------------------------------------
 -- Shapes
@@ -167,13 +169,16 @@ showObject m = T.unlines $
         , let nm = case mt of
                      MTUV i   -> materialName $ uv_materials m V.! i
                      MTNoUV i -> materialName $ materials m V.! i
+                     MTIgUV i -> materialName $ materials m V.! i
+
         ] ++
         [ "# end of file" ]
   where
     -- Only show UV indexes if there are any
     showUV :: MT a -> a -> Text
-    showUV (MTUV _) (UV i) = T.pack $ show (i + 1)        
-    showUV (MTNoUV _)   () = ""
+    showUV (MTUV _)   (UV i) = T.pack $ show (i + 1)        
+    showUV (MTNoUV _)     () = ""
+    showUV (MTIgUV _) (UV i) = T.pack $ show (i + 1)        
 
     showPT :: PT -> Text
     showPT (PT i) = T.pack $ show (i + 1)
@@ -207,11 +212,23 @@ readObject fileName = do
                 | Materials ms _ <- mss
                 , m <- ms
                 ]
+        let msU_map :: Map Text (MT ())
+            msU_map = M.fromList [ (nm,MTNoUV ix)
+                                 | (ix,Material nm _ _) <- [0..] `zip` msU 
+                                 ]
+            
+        -- A (sub)-mesh with UV can still use a non-UV material.
+        -- Hence the extra mapUV msU.
         let msUV =
                 [ m 
                 | Materials _ ms <- mss
                 , m <- ms
-                ]
+                ] ++ fmap mapUV msU
+
+        let msUV_map :: Map Text (MT UV)
+            msUV_map = M.fromList [ (nm,MTUV ix)
+                                  | (ix,Material nm _ _) <- [0..] `zip` msUV 
+                                  ]
         print wf
         print (msU,msUV)
         let all_points = fmap (fmap float2Double)
@@ -220,7 +237,7 @@ readObject fileName = do
 
         -- wfFaceNormal                      
         let wfFaceNormal :: WF.Element WF.Face -> V3 Double
-            wfFaceNormal (WF.Element _ _ _ _ (WF.Triangle p1 p2 p3)) = 
+            wfFaceNormal (WF.Element _ _ _ _ (WF.Face p1 p2 p3 _)) = 
                 faceNormal all_points [PT i | WF.FaceIndex i _ _ <- [p1,p2,p3]]
 
         let all_normals = ( fmap (fmap float2Double)
@@ -248,7 +265,7 @@ readObject fileName = do
                     let pt = PT pt_ix
                     uv <- case opt_uv of
                             Nothing -> return ()
-                            Just _ -> fail "UV found when non was expected"
+                            Just _ -> fail "UV found when none was expected"
                     let no = case opt_no of
                                Just no_ix -> NO no_ix
                                Nothing    -> def_no
@@ -257,12 +274,16 @@ readObject fileName = do
         let parseFaceUV :: NO -> WF.Element WF.Face -> Maybe Face
             parseFaceUV no (WF.Element _ _ optMtl _ (WF.Face i1 i2 i3 is)) = do
                 face_vs <- sequence [ parseFaceIndexUV no i| i <- [i1,i2,i3] ++ is]
-                return $ Face face_vs (MTUV 0)
+                mtl_nm <- optMtl
+                mt <- M.lookup mtl_nm msUV_map
+                return $ Face face_vs mt
 
             parseFaceNoUV :: NO -> WF.Element WF.Face -> Maybe Face
             parseFaceNoUV no (WF.Element _ _ optMtl _ (WF.Face i1 i2 i3 is)) = do
                 face_vs <- sequence [ parseFaceIndexNoUV no i| i <- [i1,i2,i3] ++ is]
-                return $ Face face_vs (MTNoUV 0)
+                mtl_nm <- optMtl
+                mt <- M.lookup mtl_nm msU_map
+                return $ Face face_vs mt
 
 
         return $ Object 
