@@ -258,3 +258,9 @@ blendMesh mesh = mesh
                $ points 
                $ mesh
 
+-- 'gc' removes any unused points, uv's, normals, or materials.
+-- It is easier to utilize 'gc', rather than try make sure all
+-- vectors inside object are still live after a transformation.
+
+gc :: Object -> Object
+gc = id
