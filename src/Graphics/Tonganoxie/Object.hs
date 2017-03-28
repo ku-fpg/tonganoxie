@@ -31,6 +31,7 @@ import Linear.Quaternion.Utils
 
 import Graphics.Tonganoxie.Material
 import Graphics.Tonganoxie.Types
+import Graphics.Tonganoxie.Normals
 
 import Debug.Trace
 

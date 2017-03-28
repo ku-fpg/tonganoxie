@@ -25,9 +25,6 @@ import System.FilePath (replaceExtension)
 
 import Linear.Quaternion.Utils
 
-import Graphics.Tonganoxie.Material 
-import Graphics.Tonganoxie.Surface
-import Graphics.Tonganoxie.Object
 import Graphics.Tonganoxie.Types
 
 
