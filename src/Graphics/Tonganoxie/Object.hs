@@ -282,8 +282,7 @@ readObject fileName = do
                               | (ix,f) <- [face_normal_offset..] `zip` (V.toList (WF.objFaces wf))
                               ]
                }
-  where
-    mtlFileName = replaceExtension fileName "mtl"
+
 
 -- | 'vertexBasedNormals' adds normals to the vertex.
 --   The number of a radian of what constitutes a sharp edge. 
@@ -309,7 +308,7 @@ vertexBasedNormals angle obj = obj
   normals1 :: Vector [V3 Double]
   normals1 = V.accum (flip (:)) (fmap (const []) (points obj))
            $ [ (p,normals obj V.! n)
-             | Face vs m <- faces obj
+             | Face vs _ <- faces obj
              , Vertex (PT p) _ (NO n) <- vs
              ] 
 
@@ -324,7 +323,7 @@ vertexBasedNormals angle obj = obj
                | Vertex (PT p) _ (NO n) <- vs 
                , let no = normals obj V.! n
                ]
-             | Face vs m <- faces obj
+             | Face vs _ <- faces obj
              ]
 
   normals3 :: Vector (V3 Double)
