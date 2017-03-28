@@ -35,6 +35,8 @@ import Graphics.Tonganoxie.Normals
 
 import Debug.Trace
 
+import GHC.Float (float2Double)
+
 -- To make a Object, you need to choose four things
 --  * First, a 'Surface', which is typically represented by a R2 -> R3 function.
 --  * Second, a tessellation algorithm, which determines the granularity of the triangles used to create the shape.
@@ -187,6 +189,98 @@ writeObject fileName obj = do
             (V.toList $ uv_materials $ obj) 
   where
     objFileName = fileName
+    mtlFileName = replaceExtension fileName "mtl"
+
+
+readObject :: FilePath -> IO Object
+readObject fileName = do
+    wfr <- WF.fromFile fileName
+    case wfr of
+      Left msg -> fail $ show msg
+      Right wf -> do
+        -- next, read the materials
+        mss <- mapM readMaterials $ fmap T.unpack $ V.toList $ WF.objMtlLibs wf
+        let msU = 
+                [ m 
+                | Materials ms _ <- mss
+                , m <- ms
+                ]
+        let msUV =
+                [ m 
+                | Materials _ ms <- mss
+                , m <- ms
+                ]
+        print wf
+        print (msU,msUV)
+        let all_points = fmap (fmap float2Double)
+                              $ fmap (\ (WF.Location x y z _) -> A.P $ V3 x y z) 
+                              $ WF.objLocations wf
+
+        -- wfFaceNormal                      
+        let wfFaceNormal :: WF.Element WF.Face -> V3 Double
+            wfFaceNormal (WF.Element _ _ _ _ (WF.Triangle p1 p2 p3)) = 
+                faceNormal all_points [PT i | WF.FaceIndex i _ _ <- [p1,p2,p3]]
+
+        let all_normals = ( fmap (fmap float2Double)
+                            $ fmap (\ (WF.Normal x y z) -> V3 x y z) 
+                            $ WF.objNormals wf
+                            ) V.++
+                            -- We explicitly add computed (default) normals
+                            -- for all faces. The 'gc' can clean this up, if needed.
+                            -- This is because we require normals in our representation.
+                            (fmap wfFaceNormal $ WF.objFaces wf)
+
+        let face_normal_offset = V.length $ WF.objNormals wf
+
+        let parseFaceIndexUV :: NO -> WF.FaceIndex -> Maybe (Vertex UV)
+            parseFaceIndexUV def_no (WF.FaceIndex pt_ix opt_uv opt_no) = do
+                    let pt = PT pt_ix
+                    uv <- fmap UV opt_uv -- This is the point that can fail
+                    let no = case opt_no of
+                               Just no_ix -> NO no_ix
+                               Nothing    -> def_no
+                    return $ Vertex pt uv no
+
+        let parseFaceIndexNoUV :: NO -> WF.FaceIndex -> Maybe (Vertex ())
+            parseFaceIndexNoUV def_no (WF.FaceIndex pt_ix opt_uv opt_no) = do
+                    let pt = PT pt_ix
+                    uv <- case opt_uv of
+                            Nothing -> return ()
+                            Just _ -> fail "UV found when non was expected"
+                    let no = case opt_no of
+                               Just no_ix -> NO no_ix
+                               Nothing    -> def_no
+                    return $ Vertex pt uv no
+
+        let parseFaceUV :: NO -> WF.Element WF.Face -> Maybe Face
+            parseFaceUV no (WF.Element _ _ optMtl _ (WF.Face i1 i2 i3 is)) = do
+                face_vs <- sequence [ parseFaceIndexUV no i| i <- [i1,i2,i3] ++ is]
+                return $ Face face_vs (MTUV 0)
+
+            parseFaceNoUV :: NO -> WF.Element WF.Face -> Maybe Face
+            parseFaceNoUV no (WF.Element _ _ optMtl _ (WF.Face i1 i2 i3 is)) = do
+                face_vs <- sequence [ parseFaceIndexNoUV no i| i <- [i1,i2,i3] ++ is]
+                return $ Face face_vs (MTNoUV 0)
+
+
+        return $ Object 
+               { points       = all_points
+               , normals      = all_normals
+               , uvs          = fmap (fmap float2Double)
+                              $ fmap (\ (WF.TexCoord u v _) ->  V2 u v)
+                              $ WF.objTexCoords wf
+               , materials    = V.fromList msU
+               , uv_materials = V.fromList msUV
+               , faces        = 
+                              [ case parseFaceUV (NO ix) f of
+                                  Just f_UV -> f_UV
+                                  Nothing -> case parseFaceNoUV (NO ix) f of
+                                    Just f_noUV -> f_noUV
+                                    Nothing -> error "no parse for a face"
+                              | (ix,f) <- [face_normal_offset..] `zip` (V.toList (WF.objFaces wf))
+                              ]
+               }
+  where
     mtlFileName = replaceExtension fileName "mtl"
 
 -- | 'vertexBasedNormals' adds normals to the vertex.
