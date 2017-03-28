@@ -1,4 +1,6 @@
 {-# LANGUAGE GADTs, KindSignatures, StandaloneDeriving, OverloadedStrings #-}
+{-# OPTIONS_GHC -Wall #-}
+
 module Graphics.Tonganoxie.Object where
 
 import qualified Codec.Wavefront.IO as WF
@@ -8,10 +10,10 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Monoid ((<>))
 import Data.Text (Text)
-import Data.List as L
+--import Data.List as L
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import Data.Vector (Vector, toList, fromList)
+import Data.Vector (Vector, toList)
 import qualified Data.Vector as V
 
 import Linear.Affine (Point, (.+^)) 
@@ -19,21 +21,21 @@ import qualified Linear.Affine as A
 import Linear.Epsilon
 import Linear.Quaternion (Quaternion)
 import qualified Linear.Quaternion as Q
-import Linear.V3 (V3(V3),cross)
+import Linear.V3 (V3(V3))
 import Linear.V2 (V2(V2))
 import Linear.Vector (liftU2)
-import Linear.Metric(normalize, distance, dot, qd, Metric)
+import Linear.Metric(normalize, dot, qd)
 
 import System.FilePath (replaceExtension)
-import qualified Data.Foldable as F
+--import qualified Data.Foldable as F
 
-import Linear.Quaternion.Utils
+--import Linear.Quaternion.Utils hiding (x,y,z)
 
 import Graphics.Tonganoxie.Material
 import Graphics.Tonganoxie.Types
 import Graphics.Tonganoxie.Normals
 
-import Debug.Trace
+--import Debug.Trace
 
 import GHC.Float (float2Double)
 
