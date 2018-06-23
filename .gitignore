@@ -3,4 +3,4 @@ cabal.sandbox.config
 *~
 dist/
 tmp/
-
+.stack-work/
